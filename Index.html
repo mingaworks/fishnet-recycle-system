@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      :root{--accent:#0b6efd;--muted:#666}
+      body{font-family:Inter,Arial,Helvetica,sans-serif;margin:14px;color:#222}
+      h3{margin:0 0 12px}
+      .card{border:1px solid #e6e6e6;padding:12px;border-radius:8px;margin-bottom:12px}
+      label{display:block;margin-top:8px;font-size:13px}
+      input,select,button{margin-top:6px;padding:8px 10px;font-size:14px;border-radius:6px;border:1px solid #ddd}
+      button{background:var(--accent);color:#fff;border:none;cursor:pointer}
+      button.secondary{background:#f1f3f5;color:#111;border:1px solid #ddd}
+      .list-item{padding:8px;border-radius:6px;margin-top:6px;background:#fafafa;cursor:pointer}
+      .muted{color:var(--muted);font-size:13px}
+      .flex{display:flex;gap:8px;align-items:center}
+      .right{margin-left:auto}
+      .small{font-size:13px}
+      .notice{padding:8px;border-radius:6px;background:#fff4e5;border:1px solid #f5d7a6;color:#6b4a00}
+
+      /* modal */
+      .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center}
+      .modal{background:#fff;padding:16px;border-radius:10px;max-width:480px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
+      .modal h4{margin:0 0 8px}
+
+      @media (min-width:640px){ .grid{display:grid;grid-template-columns:1fr 420px;gap:12px} }
+    </style>
+  </head>
+  <body>
+    <h3>Fishnet Recycling — Admin</h3>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <strong>Find Fisherman</strong>
+          <div class="flex" style="margin-top:8px">
+            <input id="searchQ" placeholder="Name or Person ID" style="flex:1" />
+            <button class="secondary" onclick="search()">Search</button>
+          </div>
+          <div id="searchResults" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card">
+          <strong>Log Drop-off</strong>
+          <div class="muted small">Click a fisherman from search to pre-fill. If none, register below.</div>
+          <label>Fisherman ID<input id="dropFishermanId" placeholder="Select or paste Person ID" /></label>
+          <label>Weight (kg)<input id="dropWeight" type="number" step="0.01" placeholder="e.g. 12.50" /></label>
+          <label>Purity
+            <select id="dropPurity">
+              <option>Clean</option>
+              <option>Partial</option>
+              <option>Unclean</option>
+            </select>
+          </label>
+          <label>Inspector<input id="dropInspector" placeholder="Inspector name" /></label>
+          <label>Notes<input id="dropNotes" placeholder="Optional notes" /></label>
+          <div class="flex" style="margin-top:10px">
+            <button onclick="logDrop()">Log Drop</button>
+            <button class="secondary" onclick="clearDropForm()">Clear</button>
+            <div id="dropResult" class="right muted small"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" id="activeDealCard">
+          <strong>Active Deal</strong>
+          <div id="activeDeal" class="muted small" style="margin-top:8px">Loading...</div>
+        </div>
+
+        <div class="card">
+          <strong>Pending Payment</strong>
+          <div id="pendingInfo" class="muted small" style="margin-top:8px">Select a fisherman to view pending payment.</div>
+        </div>
+
+        <div class="card">
+          <strong>Quick Register</strong>
+          <div class="muted small">Use this to register a fisherman quickly (for first-time visitors).</div>
+          <label>Full name<input id="regName" /></label>
+          <label>Phone<input id="regPhone" /></label>
+          <label>Village<input id="regVillage" /></label>
+          <div style="margin-top:8px" class="flex">
+            <button onclick="registerFromPanel()">Register</button>
+            <div id="regResult" class="muted small right"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- register modal (shown when search yields no results) -->
+    <div id="modalBackdrop" class="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h4>Register Fisherman</h4>
+        <label>Full name<input id="mRegName" /></label>
+        <label>Phone<input id="mRegPhone" /></label>
+        <label>Village<input id="mRegVillage" /></label>
+        <div style="margin-top:10px" class="flex">
+          <button onclick="registerFromModal()">Create & Use</button>
+          <button class="secondary" onclick="closeModal()">Cancel</button>
+          <div id="mRegResult" class="muted small right"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let lastSelectedFisherman = null;
+
+      function onSuccessAsync(handler){
+        return google.script.run.withSuccessHandler(handler).withFailureHandler(err=>{
+          alert('Error: ' + (err.message || err));
+        });
+      }
+
+      function loadActiveDeal(){
+        onSuccessAsync(deal => {
+          const el = document.getElementById('activeDeal');
+          if (!deal){ el.innerHTML = '<div class="notice">No active deal configured.</div>'; return; }
+          el.innerHTML = '<div><b>Deal:</b> ' + deal.data.dealId + '</div>' +
+            '<div class="small">Threshold: ' + deal.data.thresholdKg + ' kg</div>' +
+            '<div class="small">Rates: Clean ' + deal.data.rateClean + ' RM/kg, Partial ' + deal.data.ratePartial + ', Unclean ' + deal.data.rateUnclean + '</div>';
+        }).getActiveDeal();
+      }
+
+      function search(){
+        const q = document.getElementById('searchQ').value.trim();
+        const container = document.getElementById('searchResults');
+        container.innerHTML = 'Searching...';
+        onSuccessAsync(list => {
+          container.innerHTML = '';
+          if (!list || list.length===0){
+            container.innerHTML = '<div class="muted">No matches. <a href="#" onclick="openModalFromSearch()">Register new fisherman</a></div>';
+            return;
+          }
+          list.forEach(l=>{
+            const d = document.createElement('div');
+            d.className = 'list-item';
+            d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + l.personId + ' — ' + (l.village||'') + ' — ' + (l.phone||'') + '</div>';
+            d.onclick = ()=>{ selectFisherman(l); };
+            container.appendChild(d);
+          });
+        }).findFishermen(q);
+      }
+
+      function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+      function selectFisherman(f){
+        lastSelectedFisherman = f;
+        document.getElementById('dropFishermanId').value = f.personId;
+        document.getElementById('regResult').innerText = '';
+        loadPending(f.personId);
+      }
+
+      function openModalFromSearch(){
+        document.getElementById('mRegName').value = document.getElementById('searchQ').value || '';
+        document.getElementById('modalBackdrop').style.display = 'flex';
+      }
+      function closeModal(){ document.getElementById('modalBackdrop').style.display = 'none'; document.getElementById('mRegResult').innerText=''; }
+
+      function registerFromModal(){
+        const fullName = document.getElementById('mRegName').value;
+        const phone = document.getElementById('mRegPhone').value;
+        const village = document.getElementById('mRegVillage').value;
+        if (!fullName) return alert('Name required');
+        onSuccessAsync(res=>{
+          document.getElementById('mRegResult').innerText = 'Created: ' + res.personId;
+          document.getElementById('dropFishermanId').value = res.personId;
+          closeModal();
+          loadPending(res.personId);
+        }).registerFisherman({fullName, phone, village});
+      }
+
+      function registerFromPanel(){
+        const fullName = document.getElementById('regName').value;
+        const phone = document.getElementById('regPhone').value;
+        const village = document.getElementById('regVillage').value;
+        if (!fullName) return alert('Name required');
+        onSuccessAsync(res=>{
+          document.getElementById('regResult').innerText = 'Created: ' + res.personId;
+          document.getElementById('dropFishermanId').value = res.personId;
+          document.getElementById('regName').value='';document.getElementById('regPhone').value='';document.getElementById('regVillage').value='';
+          loadPending(res.personId);
+        }).registerFisherman({fullName, phone, village});
+      }
+
+      function loadPending(personId){
+        document.getElementById('pendingInfo').innerHTML = 'Loading...';
+        onSuccessAsync(p => {
+          const el = document.getElementById('pendingInfo');
+          if (!p){ el.innerHTML = '<div class="muted">No payments found.</div>'; return; }
+          el.innerHTML = '<div><b>Payment:</b> ' + p.data.paymentId + '</div>' +
+            '<div class="small">Status: ' + p.data.status + '</div>' +
+            '<div class="small">Accumulated: ' + p.data.accumulatedKg + ' kg</div>' +
+            (p.data.payload ? ('<div class="small">Payload: ' + p.data.payload + ' RM</div>') : '');
+        }).getLatestPayment(personId);
+      }
+
+      function logDrop(){
+        const fishermanId = document.getElementById('dropFishermanId').value.trim();
+        const netWeight = parseFloat(document.getElementById('dropWeight').value);
+        if (!fishermanId) return alert('Fisherman ID required');
+        if (!netWeight || netWeight <= 0) return alert('Weight must be > 0');
+        const purity = document.getElementById('dropPurity').value;
+        const inspector = document.getElementById('dropInspector').value;
+        const notes = document.getElementById('dropNotes').value;
+        document.getElementById('dropResult').innerText = 'Saving...';
+        onSuccessAsync(res=>{
+          const r = res.allocationResult || res;
+          let msg = 'Drop logged: ' + res.dropId + '. ' + (r.status || '');
+          if (r.status === 'payment_due'){
+            msg += ' Payment due: ' + (r.payoutRM || '(computed)') + ' RM — please review Payment History.';
+          } else if (r.status === 'paid'){
+            msg += ' Paid: ' + (r.payoutRM || '(computed)') + ' RM';
+          } else if (r.status === 'pending'){
+            msg += ' Accumulated: ' + (r.accumulatedKg || '') + ' kg';
+          }
+          document.getElementById('dropResult').innerText = msg;
+          document.getElementById('dropWeight').value=''; document.getElementById('dropNotes').value='';
+          loadPending(fishermanId);
+        }).logDropAndProcess({fishermanId, netWeight, purity, inspector, notes});
+      }
+
+      function clearDropForm(){ document.getElementById('dropFishermanId').value=''; document.getElementById('dropWeight').value=''; document.getElementById('dropInspector').value=''; document.getElementById('dropNotes').value=''; document.getElementById('dropResult').innerText=''; }
+
+      // init
+      loadActiveDeal();
+    </script>
+  </body>
+</html>
