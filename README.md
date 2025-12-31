@@ -32,7 +32,7 @@ Headers:
 - Payment ID | Fisherman ID | Status | Accumulated Weight (kg) | Payload (RM) | Deal ID | Date
 
 Status values written/used by the script:
-- `Pending`
+- `Accumulating`
 - `Payment Due`
 - `Paid`
 
@@ -74,11 +74,11 @@ Notes:
 
 ### 3) Automatic allocation & payment lifecycle
 When a drop-off is logged:
-- The script allocates untagged drop-offs into the current Pending payment until the deal threshold is met.
+- The script allocates untagged drop-offs into the current Accumulating payment until the deal threshold is met.
 - If the threshold is met/exceeded:
   - the payment is finalized as `Payment Due`
   - contributing drop-offs are tagged in Drop-off Log with the payment’s `Payment ID`
-  - any leftover (excess) weight is split into a new untagged drop row and a new Pending payment is created
+  - any leftover (excess) weight is split into a new untagged drop row and a new Accumulating payment is created
 
 Payload:
 - The `Payload (RM)` is computed from tagged drop-offs using the active deal’s rates and rounded to 2 decimals.

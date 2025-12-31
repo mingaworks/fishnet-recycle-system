@@ -245,7 +245,6 @@
     .typeahead-empty {
       padding: 10px 12px
     }
-
   </style>
 </head>
 
@@ -281,8 +280,8 @@
             <div class="field-name"><b>Fisherman ID</b></div>
             <div class="field-value"><span id="dropFishermanIdText" class="muted">—</span></div>
 
-            <div class="field-name">Unpaid pending (kg)</div>
-            <div class="field-value"><span id="dropPendingWeight" class="muted">—</span></div>
+            <div class="field-name">Accumulated fishnet</div>
+            <div class="field-value"><span id="dropAccumulatingWeight" class="muted">—</span></div>
 
             <div class="field-name">Weight (kg)</div>
             <input id="dropWeight" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 12" />
@@ -585,19 +584,19 @@
         nameEl.innerText = nm || 'None selected';
       }
 
-      const pendingEl = document.getElementById('dropPendingWeight');
-      if (pendingEl) pendingEl.innerText = selectedFishermanId ? 'Loading…' : '—';
+      const accumulatingEl = document.getElementById('dropAccumulatingWeight');
+      if (accumulatingEl) accumulatingEl.innerText = selectedFishermanId ? 'Loading…' : '—';
       if (selectedFishermanId) {
         google.script.run
           .withSuccessHandler(res => {
-            const kg = res && typeof res.pendingKg !== 'undefined' ? res.pendingKg : 0;
-            if (pendingEl) pendingEl.innerText = (kg || 0) + ' kg';
+            const kg = res && typeof res.accumulatingKg !== 'undefined' ? res.accumulatingKg : 0;
+            if (accumulatingEl) accumulatingEl.innerText = (kg || 0) + ' kg';
           })
           .withFailureHandler(err => {
-            if (pendingEl) pendingEl.innerText = '—';
+            if (accumulatingEl) accumulatingEl.innerText = '—';
             try { console.error(err); } catch (e) { }
           })
-          .getPendingPaymentSummary(selectedFishermanId);
+          .getAccumulatingPaymentSummary(selectedFishermanId);
       }
 
       setAdmitVisible(!!selectedFishermanId);
@@ -957,7 +956,7 @@
           document.getElementById('dropWeight').value = ''; document.getElementById('dropNotes').value = '';
           loadPaymentExplorer();
           loadVolunteerContribution();
-          // refresh pending display after allocation
+          // refresh accumulating display after allocation
           try { selectFisherman(lastSelectedFisherman || { personId: fishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
 
           if (submitBtn) {
@@ -983,8 +982,8 @@
       if (idText) idText.innerText = '—';
       const nameEl = document.getElementById('dropFishermanName');
       if (nameEl) nameEl.innerText = 'None selected';
-      const pendingEl = document.getElementById('dropPendingWeight');
-      if (pendingEl) pendingEl.innerText = '—';
+      const accumulatingEl = document.getElementById('dropAccumulatingWeight');
+      if (accumulatingEl) accumulatingEl.innerText = '—';
 
       document.getElementById('dropWeight').value = '';
       document.getElementById('dropInspector').value = '';

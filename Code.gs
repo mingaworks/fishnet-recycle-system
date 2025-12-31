@@ -334,19 +334,24 @@ function confirmPayment(paymentId) {
     throw new Error('Payment not found: ' + paymentId);
 }
 
-function getPendingPayment(fishermanId) {
+function getAccumulatingPayment(fishermanId) {
     const sheet = getSheet(SHEET_NAMES.PAYMENTS);
     const headers = headerMap(sheet);
     const rows = getDataRows(sheet);
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
-        if (r[headers['Fisherman ID'] - 1] == fishermanId && (r[headers['Status'] - 1] + '').toLowerCase() === 'pending') {
+        if (r[headers['Fisherman ID'] - 1] == fishermanId) {
+            const statusCol = headers['Status'];
+            const statusRaw = (r[statusCol - 1] || '').toString();
+            const statusNorm = _normalizeStatus(statusRaw);
+            if (statusNorm !== 'accumulating') continue;
+
             return {
                 rowIndex: 2 + i,
                 data: {
                     paymentId: r[headers['Payment ID'] - 1],
                     fishermanId: r[headers['Fisherman ID'] - 1],
-                    status: r[headers['Status'] - 1],
+                    status: 'Accumulating',
                     accumulatedKg: parseFloat(r[headers['Accumulated Weight (kg)'] - 1]) || 0,
                     payload: r[headers['Payload (RM)'] - 1],
                     dealId: r[headers['Deal ID'] - 1],
@@ -358,12 +363,12 @@ function getPendingPayment(fishermanId) {
     return null;
 }
 
-function getPendingPaymentSummary(fishermanId) {
-    if (!fishermanId) return { fishermanId: '', pendingKg: 0 };
-    const pending = getPendingPayment(fishermanId);
+function getAccumulatingPaymentSummary(fishermanId) {
+    if (!fishermanId) return { fishermanId: '', accumulatingKg: 0 };
+    const accumulating = getAccumulatingPayment(fishermanId);
     return {
         fishermanId: (fishermanId || '').toString(),
-        pendingKg: pending ? (pending.data.accumulatedKg || 0) : 0
+        accumulatingKg: accumulating ? (accumulating.data.accumulatedKg || 0) : 0
     };
 }
 
@@ -392,7 +397,7 @@ function getLatestPayment(fishermanId) {
     return null;
 }
 
-function createPendingPayment(fishermanId, accumulatedKg, dealId) {
+function createAccumulatingPayment(fishermanId, accumulatedKg, dealId) {
     const sheet = getSheet(SHEET_NAMES.PAYMENTS);
     const headers = headerMap(sheet);
     const pid = _generateUniqueIdForSheet('P', SHEET_NAMES.PAYMENTS, 'Payment ID');
@@ -400,13 +405,13 @@ function createPendingPayment(fishermanId, accumulatedKg, dealId) {
     const row = [];
     row[headers['Payment ID'] - 1] = pid;
     row[headers['Fisherman ID'] - 1] = fishermanId;
-    row[headers['Status'] - 1] = 'Pending';
+    row[headers['Status'] - 1] = 'Accumulating';
     row[headers['Accumulated Weight (kg)'] - 1] = accumulatedKg;
     row[headers['Payload (RM)'] - 1] = '';
     row[headers['Deal ID'] - 1] = dealId || (getActiveDeal() ? getActiveDeal().data.dealId : '');
     row[headers['Date'] - 1] = now;
     sheet.appendRow(row);
-    return { rowIndex: sheet.getLastRow(), data: { paymentId: pid, fishermanId, status: 'Pending', accumulatedKg, dealId: row[headers['Deal ID'] - 1], date: now } };
+    return { rowIndex: sheet.getLastRow(), data: { paymentId: pid, fishermanId, status: 'Accumulating', accumulatedKg, dealId: row[headers['Deal ID'] - 1], date: now } };
 }
 
 function appendDrop(drop) {
@@ -529,7 +534,7 @@ function finalizePayment(paymentRowObj) {
     paymentsSheet.getRange(rowIndex, 1, 1, rowVals.length).setValues([rowVals]);
 }
 
-function allocateToPending(fishermanId) {
+function allocateToAccumulating(fishermanId) {
     const deal = getActiveDeal();
     if (!deal) throw new Error('No active deal to use for allocation.');
     const threshold = deal.data.thresholdKg;
@@ -538,50 +543,50 @@ function allocateToPending(fishermanId) {
 
     let lastResult = { status: 'no-op', message: 'Nothing to allocate' };
 
-    // Keep allocating until the current pending is below threshold OR no unallocated drops remain.
-    // This is what allows a single big drop (e.g. 230kg) to produce 100 + 100 + 30, with 2 Due + 1 Pending.
+    // Keep allocating until the current accumulating payment is below threshold OR no unallocated drops remain.
+    // This is what allows a single big drop (e.g. 230kg) to produce 100 + 100 + 30, with 2 Due + 1 Accumulating.
     while (true) {
         const unallocated = getUnallocatedDrops(fishermanId);
         if (!unallocated || unallocated.length === 0) {
             return lastResult;
         }
 
-        // ensure there's a pending payment (create only when we actually have something to allocate)
-        let pending = getPendingPayment(fishermanId);
-        if (!pending) {
-            pending = createPendingPayment(fishermanId, 0, deal.data.dealId);
+        // ensure there's an accumulating payment (create only when we actually have something to allocate)
+        let accumulating = getAccumulatingPayment(fishermanId);
+        if (!accumulating) {
+            accumulating = createAccumulatingPayment(fishermanId, 0, deal.data.dealId);
         }
 
-        // compute currently allocated weight for this pending payment (from tagged drops)
+        // compute currently allocated weight for this accumulating payment (from tagged drops)
         const allDrops = getDataRows(dropsSheet);
         let alreadyAllocated = 0;
         for (let i = 0; i < allDrops.length; i++) {
             const r = allDrops[i];
-            if ((r[dHeaders['Payment ID'] - 1] + '') === (pending.data.paymentId + '')) {
+            if ((r[dHeaders['Payment ID'] - 1] + '') === (accumulating.data.paymentId + '')) {
                 alreadyAllocated += parseFloat(r[dHeaders['Net Weight (kg)'] - 1]) || 0;
             }
         }
 
         let needed = Math.max(0, threshold - alreadyAllocated);
 
-        // If pending somehow already meets/exceeds threshold, finalize it and try allocate remaining unallocated drops
+        // If accumulating somehow already meets/exceeds threshold, finalize it and try allocate remaining unallocated drops
         if (needed <= 0) {
-            finalizePayment({ rowIndex: pending.rowIndex, data: { paymentId: pending.data.paymentId, accumulatedKg: alreadyAllocated } });
-            lastResult = { status: 'payment_due', paymentId: pending.data.paymentId, payoutRM: computePayloadForPayment(pending.data.paymentId) };
+            finalizePayment({ rowIndex: accumulating.rowIndex, data: { paymentId: accumulating.data.paymentId, accumulatedKg: alreadyAllocated } });
+            lastResult = { status: 'payment_due', paymentId: accumulating.data.paymentId, payoutRM: computePayloadForPayment(accumulating.data.paymentId) };
             continue;
         }
 
-        // allocate unallocated drops into pending until we fill it (splitting rows as needed)
+        // allocate unallocated drops into accumulating until we fill it (splitting rows as needed)
         for (let i = 0; i < unallocated.length && needed > 0; i++) {
             const d = unallocated[i];
             if (d.netWeight <= needed + 1e-9) {
-                updateDropRow(d.rowIndex, { 'Payment ID': pending.data.paymentId });
+                updateDropRow(d.rowIndex, { 'Payment ID': accumulating.data.paymentId });
                 needed -= d.netWeight;
             } else {
                 const allocatedPortion = needed;
                 const leftover = d.netWeight - allocatedPortion;
 
-                updateDropRow(d.rowIndex, { 'Net Weight (kg)': allocatedPortion, 'Payment ID': pending.data.paymentId });
+                updateDropRow(d.rowIndex, { 'Net Weight (kg)': allocatedPortion, 'Payment ID': accumulating.data.paymentId });
 
                 const leftoverDrop = {
                     dropId: _generateUniqueIdForSheet('D', SHEET_NAMES.DROPS, 'Drop ID'),
@@ -599,30 +604,30 @@ function allocateToPending(fishermanId) {
             }
         }
 
-        // recompute allocated sum for this pending
+        // recompute allocated sum for this accumulating
         const updatedAllDrops = getDataRows(dropsSheet);
         let allocatedAfter = 0;
         for (let i = 0; i < updatedAllDrops.length; i++) {
             const r = updatedAllDrops[i];
-            if ((r[dHeaders['Payment ID'] - 1] + '') === (pending.data.paymentId + '')) {
+            if ((r[dHeaders['Payment ID'] - 1] + '') === (accumulating.data.paymentId + '')) {
                 allocatedAfter += parseFloat(r[dHeaders['Net Weight (kg)'] - 1]) || 0;
             }
         }
 
         if (allocatedAfter + 1e-9 >= threshold) {
-            finalizePayment({ rowIndex: pending.rowIndex, data: { paymentId: pending.data.paymentId, accumulatedKg: allocatedAfter } });
-            lastResult = { status: 'payment_due', paymentId: pending.data.paymentId, payoutRM: computePayloadForPayment(pending.data.paymentId) };
-            // Loop again: if there is still unallocated weight >= threshold, we'll create another pending and finalize again.
+            finalizePayment({ rowIndex: accumulating.rowIndex, data: { paymentId: accumulating.data.paymentId, accumulatedKg: allocatedAfter } });
+            lastResult = { status: 'payment_due', paymentId: accumulating.data.paymentId, payoutRM: computePayloadForPayment(accumulating.data.paymentId) };
+            // Loop again: if there is still unallocated weight >= threshold, we'll create another accumulating and finalize again.
             continue;
         }
 
-        // update pending accumulated weight to allocatedAfter and stop
+        // update accumulating accumulated weight to allocatedAfter and stop
         const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
         const pHeaders = headerMap(paymentsSheet);
-        const row = paymentsSheet.getRange(pending.rowIndex, 1, 1, paymentsSheet.getLastColumn()).getValues()[0];
+        const row = paymentsSheet.getRange(accumulating.rowIndex, 1, 1, paymentsSheet.getLastColumn()).getValues()[0];
         row[pHeaders['Accumulated Weight (kg)'] - 1] = allocatedAfter;
-        paymentsSheet.getRange(pending.rowIndex, 1, 1, row.length).setValues([row]);
-        lastResult = { status: 'pending', accumulatedKg: allocatedAfter, paymentId: pending.data.paymentId };
+        paymentsSheet.getRange(accumulating.rowIndex, 1, 1, row.length).setValues([row]);
+        lastResult = { status: 'accumulating', accumulatedKg: allocatedAfter, paymentId: accumulating.data.paymentId };
         return lastResult;
     }
 }
@@ -631,8 +636,8 @@ function logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes })
     if (!fishermanId) throw new Error('fishermanId required');
     const drop = { fishermanId, netWeight: parseFloat(netWeight), purity, inspector, notes, paymentId: '' };
     const added = appendDrop(drop);
-    // try to allocate to pending and possibly trigger payout
-    const res = allocateToPending(fishermanId);
+    // try to allocate to accumulating and possibly trigger payout
+    const res = allocateToAccumulating(fishermanId);
     return { dropId: added.dropId, allocationResult: res };
 }
 
