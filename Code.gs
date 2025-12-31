@@ -31,6 +31,39 @@ function doGet() {
     return HtmlService.createHtmlOutputFromFile('Index').setTitle('Fishnet Recycling Admin');
 }
 
+function _ensureHeaderExists(sheetName, headerName) {
+    const sheet = getSheet(sheetName);
+    if (!sheet) throw new Error('Missing sheet: ' + sheetName);
+    const lastCol = Math.max(1, sheet.getLastColumn());
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0] || [];
+    const normalized = headers.map(h => (h || '').toString().trim());
+    if (normalized.indexOf(headerName) !== -1) return;
+    sheet.getRange(1, lastCol + 1).setValue(headerName);
+}
+
+function getFishermen() {
+    const sheet = getSheet(SHEET_NAMES.FISHERMEN);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+    const tz = Session.getScriptTimeZone();
+    return rows
+        .map(r => {
+            const id = (r[headers['Person ID'] - 1] || '').toString();
+            if (!id) return null;
+            const regDateCol = headers['Registry Date'];
+            const regDateVal = regDateCol ? r[regDateCol - 1] : null;
+            const regDate = _coerceToDate(regDateVal);
+            return {
+                personId: id,
+                fullName: (r[headers['Full Name'] - 1] || '').toString(),
+                phone: (headers['Phone'] ? (r[headers['Phone'] - 1] || '').toString() : ''),
+                village: (headers['Village'] ? (r[headers['Village'] - 1] || '').toString() : ''),
+                registryDate: regDate ? Utilities.formatDate(regDate, tz, 'yyyy-MM-dd') : ''
+            };
+        })
+        .filter(Boolean);
+}
+
 function getActiveDeal() {
     const sheet = getSheet(SHEET_NAMES.DEALS);
     const lastRow = sheet.getLastRow();
@@ -96,20 +129,209 @@ function findFishermen(query) {
     const rows = getDataRows(sheet);
     const q = (query + '').toLowerCase().trim();
     const results = [];
+    const tz = Session.getScriptTimeZone();
     rows.forEach(r => {
-        const id = r[headers['Person ID'] - 1];
-        const name = (r[headers['Full Name'] - 1] || '') + '';
+        const id = (r[headers['Person ID'] - 1] || '').toString();
+        const name = (r[headers['Full Name'] - 1] || '').toString();
         if ((id + '').toLowerCase().indexOf(q) !== -1 || name.toLowerCase().indexOf(q) !== -1) {
+            const regDateCol = headers['Registry Date'];
+            const regDateVal = regDateCol ? r[regDateCol - 1] : null;
+            const regDate = _coerceToDate(regDateVal);
             results.push({
                 personId: id,
                 fullName: name,
-                phone: r[headers['Phone'] - 1],
-                village: r[headers['Village'] - 1],
-                registryDate: r[headers['Registry Date'] - 1]
+                phone: (headers['Phone'] ? (r[headers['Phone'] - 1] || '').toString() : ''),
+                village: (headers['Village'] ? (r[headers['Village'] - 1] || '').toString() : ''),
+                registryDate: regDate ? Utilities.formatDate(regDate, tz, 'yyyy-MM-dd') : ''
             });
         }
     });
     return results;
+}
+
+function getOpenPayments() {
+    // Backwards compatible alias.
+    return getDuePayments();
+}
+
+function getDuePayments() {
+    // Returns payments with Status = "Payment Due" (case-insensitive)
+    const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const pHeaders = headerMap(paymentsSheet);
+    const paymentRows = getDataRows(paymentsSheet);
+
+    const fishermenSheet = getSheet(SHEET_NAMES.FISHERMEN);
+    const fHeaders = headerMap(fishermenSheet);
+    const fishermenRows = getDataRows(fishermenSheet);
+
+    const fishermanById = {};
+    fishermenRows.forEach(r => {
+        const id = (r[fHeaders['Person ID'] - 1] || '').toString();
+        if (!id) return;
+        fishermanById[id] = {
+            personId: id,
+            fullName: (r[fHeaders['Full Name'] - 1] || '').toString(),
+            phone: (fHeaders['Phone'] ? (r[fHeaders['Phone'] - 1] || '').toString() : ''),
+            village: (fHeaders['Village'] ? (r[fHeaders['Village'] - 1] || '').toString() : '')
+        };
+    });
+
+    const results = [];
+    paymentRows.forEach((r, idx) => {
+        const paymentId = (r[pHeaders['Payment ID'] - 1] || '').toString().trim();
+        if (!paymentId) return; // ignore table/empty rows
+
+        const statusRaw = (r[pHeaders['Status'] - 1] || '').toString();
+        const statusNorm = _normalizeStatus(statusRaw);
+        const isDue = statusNorm === 'payment due' || statusNorm === 'payment_due' || statusNorm.indexOf('due') !== -1;
+        if (!isDue) return;
+
+        const fishermanId = (r[pHeaders['Fisherman ID'] - 1] || '').toString();
+        const fisherman = fishermanById[fishermanId] || { personId: fishermanId, fullName: '', phone: '', village: '' };
+        results.push({
+            paymentId,
+            fishermanId,
+            fishermanName: fisherman.fullName,
+            fishermanPhone: fisherman.phone,
+            fishermanVillage: fisherman.village,
+            status: statusRaw,
+            accumulatedKg: parseFloat(r[pHeaders['Accumulated Weight (kg)'] - 1]) || 0,
+            payloadRM: r[pHeaders['Payload (RM)'] - 1] || '',
+            dealId: r[pHeaders['Deal ID'] - 1] || '',
+            date: _formatDateTime(r[pHeaders['Date'] - 1])
+        });
+    });
+
+    results.sort((a, b) => {
+        const da = _coerceToDate(a.date);
+        const db = _coerceToDate(b.date);
+        const ta = da ? da.getTime() : 0;
+        const tb = db ? db.getTime() : 0;
+        if (tb !== ta) return tb - ta;
+        return (a.paymentId + '').localeCompare(b.paymentId + '');
+    });
+
+    return JSON.parse(JSON.stringify(results));
+}
+
+function getPaidPayments() {
+    // Returns payments with Status = "Paid" (case-insensitive)
+    const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const pHeaders = headerMap(paymentsSheet);
+    const paymentRows = getDataRows(paymentsSheet);
+
+    const fishermenSheet = getSheet(SHEET_NAMES.FISHERMEN);
+    const fHeaders = headerMap(fishermenSheet);
+    const fishermenRows = getDataRows(fishermenSheet);
+
+    const fishermanById = {};
+    fishermenRows.forEach(r => {
+        const id = (r[fHeaders['Person ID'] - 1] || '').toString();
+        if (!id) return;
+        fishermanById[id] = {
+            personId: id,
+            fullName: (r[fHeaders['Full Name'] - 1] || '').toString(),
+            phone: (fHeaders['Phone'] ? (r[fHeaders['Phone'] - 1] || '').toString() : ''),
+            village: (fHeaders['Village'] ? (r[fHeaders['Village'] - 1] || '').toString() : '')
+        };
+    });
+
+    const results = [];
+    paymentRows.forEach(r => {
+        const paymentId = (r[pHeaders['Payment ID'] - 1] || '').toString().trim();
+        if (!paymentId) return; // ignore table/empty rows
+
+        const statusRaw = (r[pHeaders['Status'] - 1] || '').toString();
+        const statusNorm = _normalizeStatus(statusRaw);
+        if (statusNorm !== 'paid') return;
+
+        const fishermanId = (r[pHeaders['Fisherman ID'] - 1] || '').toString();
+        const fisherman = fishermanById[fishermanId] || { personId: fishermanId, fullName: '', phone: '', village: '' };
+        results.push({
+            paymentId,
+            fishermanId,
+            fishermanName: fisherman.fullName,
+            fishermanPhone: fisherman.phone,
+            fishermanVillage: fisherman.village,
+            accumulatedKg: parseFloat(r[pHeaders['Accumulated Weight (kg)'] - 1]) || 0,
+            payloadRM: r[pHeaders['Payload (RM)'] - 1] || '',
+            dealId: r[pHeaders['Deal ID'] - 1] || '',
+            date: _formatDateTime(r[pHeaders['Date'] - 1])
+        });
+    });
+
+    results.sort((a, b) => {
+        const da = _coerceToDate(a.date);
+        const db = _coerceToDate(b.date);
+        const ta = da ? da.getTime() : 0;
+        const tb = db ? db.getTime() : 0;
+        if (tb !== ta) return tb - ta;
+        return (a.paymentId + '').localeCompare(b.paymentId + '');
+    });
+
+    return JSON.parse(JSON.stringify(results));
+}
+
+function getDropoffsByPaymentId(paymentId) {
+    if (!paymentId) throw new Error('paymentId required');
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
+    const sheet = getSheet(SHEET_NAMES.DROPS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+
+    const results = [];
+    rows.forEach(r => {
+        const pid = (r[headers['Payment ID'] - 1] || '').toString();
+        if ((pid + '') !== (paymentId + '')) return;
+        results.push({
+            dropId: (r[headers['Drop ID'] - 1] || '').toString(),
+            fishermanId: (r[headers['Fisherman ID'] - 1] || '').toString(),
+            date: _formatDateTime(r[headers['Date'] - 1]),
+            netWeightKg: parseFloat(r[headers['Net Weight (kg)'] - 1]) || 0,
+            purity: (r[headers['Purity'] - 1] || '').toString(),
+            inspector: (r[headers['Inspector'] - 1] || '').toString(),
+            notes: (r[headers['Notes'] - 1] || '').toString()
+        });
+    });
+
+    results.sort((a, b) => {
+        const da = _coerceToDate(a.date);
+        const db = _coerceToDate(b.date);
+        const ta = da ? da.getTime() : 0;
+        const tb = db ? db.getTime() : 0;
+        return ta - tb;
+    });
+
+    return JSON.parse(JSON.stringify(results));
+}
+
+function confirmPayment(paymentId) {
+    if (!paymentId) throw new Error('paymentId required');
+    const sheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+
+    const pidCol = headers['Payment ID'];
+    const statusCol = headers['Status'];
+    if (!pidCol || !statusCol) throw new Error('Payment History headers missing Payment ID/Status');
+
+    for (let i = 0; i < rows.length; i++) {
+        const rowPid = (rows[i][pidCol - 1] || '').toString();
+        if (rowPid !== paymentId.toString()) continue;
+
+        const rowIndex = 2 + i;
+        const existing = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const statusRaw = (existing[statusCol - 1] || '').toString();
+        const statusNorm = _normalizeStatus(statusRaw);
+        const isDue = statusNorm === 'payment due' || statusNorm === 'payment_due' || statusNorm.indexOf('due') !== -1;
+        if (!isDue) throw new Error('Payment is not due: ' + statusRaw);
+
+        existing[statusCol - 1] = 'Paid';
+        sheet.getRange(rowIndex, 1, 1, existing.length).setValues([existing]);
+        return { ok: true, paymentId };
+    }
+
+    throw new Error('Payment not found: ' + paymentId);
 }
 
 function getPendingPayment(fishermanId) {
@@ -134,6 +356,15 @@ function getPendingPayment(fishermanId) {
         }
     }
     return null;
+}
+
+function getPendingPaymentSummary(fishermanId) {
+    if (!fishermanId) return { fishermanId: '', pendingKg: 0 };
+    const pending = getPendingPayment(fishermanId);
+    return {
+        fishermanId: (fishermanId || '').toString(),
+        pendingKg: pending ? (pending.data.accumulatedKg || 0) : 0
+    };
 }
 
 function getLatestPayment(fishermanId) {
@@ -179,6 +410,7 @@ function createPendingPayment(fishermanId, accumulatedKg, dealId) {
 }
 
 function appendDrop(drop) {
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
     const sheet = getSheet(SHEET_NAMES.DROPS);
     const headers = headerMap(sheet);
     const did = _generateUniqueIdForSheet('D', SHEET_NAMES.DROPS, 'Drop ID');
@@ -197,6 +429,7 @@ function appendDrop(drop) {
 }
 
 function getUnallocatedDrops(fishermanId) {
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
     const sheet = getSheet(SHEET_NAMES.DROPS);
     const headers = headerMap(sheet);
     const rows = getDataRows(sheet);
@@ -221,6 +454,7 @@ function getUnallocatedDrops(fishermanId) {
 }
 
 function updateDropRow(rowIndex, updates) {
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
     const sheet = getSheet(SHEET_NAMES.DROPS);
     const headers = headerMap(sheet);
     const writeRow = [];
@@ -234,6 +468,7 @@ function updateDropRow(rowIndex, updates) {
 }
 
 function insertDropRowAtEnd(dropRowObj) {
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
     const sheet = getSheet(SHEET_NAMES.DROPS);
     const headers = headerMap(sheet);
     const row = [];
@@ -281,13 +516,12 @@ function finalizePayment(paymentRowObj) {
     const paymentId = paymentRowObj.data.paymentId;
     const accumulated = paymentRowObj.data.accumulatedKg;
     const payload = computePayloadForPayment(paymentId);
-    // update payment row: Status -> Paid, Accumulated Weight = threshold (cap), Payload, Deal ID, Date
+    // update payment row: Status -> Payment Due, Accumulated Weight = threshold (cap), Payload, Deal ID, Date
     const threshold = deal.data.thresholdKg;
     const now = new Date();
     const rowIndex = paymentRowObj.rowIndex;
     const rowVals = paymentsSheet.getRange(rowIndex, 1, 1, paymentsSheet.getLastColumn()).getValues()[0];
-    // mark as ready for payout; actual 'Paid' status should be set manually by staff
-    rowVals[pHeaders['Status'] - 1] = 'Payment due';
+    rowVals[pHeaders['Status'] - 1] = 'Payment Due';
     rowVals[pHeaders['Accumulated Weight (kg)'] - 1] = threshold;
     rowVals[pHeaders['Payload (RM)'] - 1] = payload;
     rowVals[pHeaders['Deal ID'] - 1] = deal.data.dealId;
@@ -298,87 +532,98 @@ function finalizePayment(paymentRowObj) {
 function allocateToPending(fishermanId) {
     const deal = getActiveDeal();
     if (!deal) throw new Error('No active deal to use for allocation.');
-    // ensure there's a pending payment
-    let pending = getPendingPayment(fishermanId);
-    if (!pending) {
-        // create pending with 0; we'll allocate from drops
-        pending = createPendingPayment(fishermanId, 0, deal.data.dealId);
-    }
-    // compute currently allocated weight for this pending payment
+    const threshold = deal.data.thresholdKg;
     const dropsSheet = getSheet(SHEET_NAMES.DROPS);
     const dHeaders = headerMap(dropsSheet);
-    const allDrops = getDataRows(dropsSheet);
-    let alreadyAllocated = 0;
-    for (let i = 0; i < allDrops.length; i++) {
-        const r = allDrops[i];
-        if ((r[dHeaders['Payment ID'] - 1] + '') === (pending.data.paymentId + '')) {
-            alreadyAllocated += parseFloat(r[dHeaders['Net Weight (kg)'] - 1]) || 0;
+
+    let lastResult = { status: 'no-op', message: 'Nothing to allocate' };
+
+    // Keep allocating until the current pending is below threshold OR no unallocated drops remain.
+    // This is what allows a single big drop (e.g. 230kg) to produce 100 + 100 + 30, with 2 Due + 1 Pending.
+    while (true) {
+        const unallocated = getUnallocatedDrops(fishermanId);
+        if (!unallocated || unallocated.length === 0) {
+            return lastResult;
         }
-    }
-    const threshold = deal.data.thresholdKg;
-    let needed = Math.max(0, threshold - alreadyAllocated);
-    if (needed <= 0) {
-        // nothing to allocate
-        return { status: 'no-op', message: 'Pending already meets threshold' };
-    }
-    // get unallocated drops
-    const unallocated = getUnallocatedDrops(fishermanId);
-    for (let i = 0; i < unallocated.length && needed > 0; i++) {
-        const d = unallocated[i];
-        if (d.netWeight <= needed + 1e-9) {
-            // fully allocate this drop to pending
-            updateDropRow(d.rowIndex, { 'Payment ID': pending.data.paymentId });
-            needed -= d.netWeight;
-        } else {
-            // split: allocated portion becomes row with weight = needed and tagged; leftover becomes new unallocated row
-            const allocatedPortion = needed;
-            const leftover = d.netWeight - allocatedPortion;
-            // update existing row to allocatedPortion and set Payment ID
-            updateDropRow(d.rowIndex, { 'Net Weight (kg)': allocatedPortion, 'Payment ID': pending.data.paymentId });
-            // insert new leftover drop row
-            const leftoverDrop = {
-                dropId: _generateUniqueIdForSheet('D', SHEET_NAMES.DROPS, 'Drop ID'),
-                fishermanId: fishermanId,
-                date: d.date,
-                netWeight: leftover,
-                purity: d.purity,
-                inspector: d.inspector,
-                notes: (d.notes ? d.notes + ' (leftover)' : 'leftover'),
-                paymentId: ''
-            };
-            insertDropRowAtEnd(leftoverDrop);
-            needed = 0;
-            break;
+
+        // ensure there's a pending payment (create only when we actually have something to allocate)
+        let pending = getPendingPayment(fishermanId);
+        if (!pending) {
+            pending = createPendingPayment(fishermanId, 0, deal.data.dealId);
         }
-    }
-    // recompute allocated sum for this pending
-    // read updated drops and sum where Payment ID == pending
-    const updatedAllDrops = getDataRows(getSheet(SHEET_NAMES.DROPS));
-    let allocatedAfter = 0;
-    for (let i = 0; i < updatedAllDrops.length; i++) {
-        const r = updatedAllDrops[i];
-        if ((r[dHeaders['Payment ID'] - 1] + '') === (pending.data.paymentId + '')) {
-            allocatedAfter += parseFloat(r[dHeaders['Net Weight (kg)'] - 1]) || 0;
+
+        // compute currently allocated weight for this pending payment (from tagged drops)
+        const allDrops = getDataRows(dropsSheet);
+        let alreadyAllocated = 0;
+        for (let i = 0; i < allDrops.length; i++) {
+            const r = allDrops[i];
+            if ((r[dHeaders['Payment ID'] - 1] + '') === (pending.data.paymentId + '')) {
+                alreadyAllocated += parseFloat(r[dHeaders['Net Weight (kg)'] - 1]) || 0;
+            }
         }
-    }
-    // if allocatedAfter >= threshold -> finalize payment and create new pending for leftover unallocated total
-    if (allocatedAfter + 1e-9 >= threshold) {
-        finalizePayment({ rowIndex: pending.rowIndex, data: { paymentId: pending.data.paymentId, accumulatedKg: allocatedAfter } });
-        // compute leftover unallocated weight for fisherman
-        const remDrops = getUnallocatedDrops(fishermanId);
-        let remTotal = remDrops.reduce((s, d) => s + (parseFloat(d.netWeight) || 0), 0);
-        if (remTotal > 0.000001) {
-            createPendingPayment(fishermanId, remTotal, deal.data.dealId);
+
+        let needed = Math.max(0, threshold - alreadyAllocated);
+
+        // If pending somehow already meets/exceeds threshold, finalize it and try allocate remaining unallocated drops
+        if (needed <= 0) {
+            finalizePayment({ rowIndex: pending.rowIndex, data: { paymentId: pending.data.paymentId, accumulatedKg: alreadyAllocated } });
+            lastResult = { status: 'payment_due', paymentId: pending.data.paymentId, payoutRM: computePayloadForPayment(pending.data.paymentId) };
+            continue;
         }
-        return { status: 'payment_due', paymentId: pending.data.paymentId, payoutRM: computePayloadForPayment(pending.data.paymentId) };
-    } else {
-        // update pending accumulated weight to allocatedAfter
+
+        // allocate unallocated drops into pending until we fill it (splitting rows as needed)
+        for (let i = 0; i < unallocated.length && needed > 0; i++) {
+            const d = unallocated[i];
+            if (d.netWeight <= needed + 1e-9) {
+                updateDropRow(d.rowIndex, { 'Payment ID': pending.data.paymentId });
+                needed -= d.netWeight;
+            } else {
+                const allocatedPortion = needed;
+                const leftover = d.netWeight - allocatedPortion;
+
+                updateDropRow(d.rowIndex, { 'Net Weight (kg)': allocatedPortion, 'Payment ID': pending.data.paymentId });
+
+                const leftoverDrop = {
+                    dropId: _generateUniqueIdForSheet('D', SHEET_NAMES.DROPS, 'Drop ID'),
+                    fishermanId: fishermanId,
+                    date: d.date,
+                    netWeight: leftover,
+                    purity: d.purity,
+                    inspector: d.inspector,
+                    notes: (d.notes || ''),
+                    paymentId: ''
+                };
+                insertDropRowAtEnd(leftoverDrop);
+                needed = 0;
+                break;
+            }
+        }
+
+        // recompute allocated sum for this pending
+        const updatedAllDrops = getDataRows(dropsSheet);
+        let allocatedAfter = 0;
+        for (let i = 0; i < updatedAllDrops.length; i++) {
+            const r = updatedAllDrops[i];
+            if ((r[dHeaders['Payment ID'] - 1] + '') === (pending.data.paymentId + '')) {
+                allocatedAfter += parseFloat(r[dHeaders['Net Weight (kg)'] - 1]) || 0;
+            }
+        }
+
+        if (allocatedAfter + 1e-9 >= threshold) {
+            finalizePayment({ rowIndex: pending.rowIndex, data: { paymentId: pending.data.paymentId, accumulatedKg: allocatedAfter } });
+            lastResult = { status: 'payment_due', paymentId: pending.data.paymentId, payoutRM: computePayloadForPayment(pending.data.paymentId) };
+            // Loop again: if there is still unallocated weight >= threshold, we'll create another pending and finalize again.
+            continue;
+        }
+
+        // update pending accumulated weight to allocatedAfter and stop
         const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
         const pHeaders = headerMap(paymentsSheet);
         const row = paymentsSheet.getRange(pending.rowIndex, 1, 1, paymentsSheet.getLastColumn()).getValues()[0];
         row[pHeaders['Accumulated Weight (kg)'] - 1] = allocatedAfter;
         paymentsSheet.getRange(pending.rowIndex, 1, 1, row.length).setValues([row]);
-        return { status: 'pending', accumulatedKg: allocatedAfter };
+        lastResult = { status: 'pending', accumulatedKg: allocatedAfter, paymentId: pending.data.paymentId };
+        return lastResult;
     }
 }
 
@@ -389,4 +634,123 @@ function logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes })
     // try to allocate to pending and possibly trigger payout
     const res = allocateToPending(fishermanId);
     return { dropId: added.dropId, allocationResult: res };
+}
+
+function _coerceToDate(v) {
+    if (!v) return null;
+    if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) return v;
+    const d = new Date(v);
+    if (Object.prototype.toString.call(d) === '[object Date]' && !isNaN(d.getTime())) return d;
+    return null;
+}
+
+function _normalizeStatus(s) {
+    return (s || '')
+        .toString()
+        .replace(/[\s\u00A0]+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function _formatDateTime(v) {
+    const d = _coerceToDate(v);
+    if (!d) return '';
+    const tz = Session.getScriptTimeZone();
+    return Utilities.formatDate(d, tz, 'dd/MM/yyyy HH:mm:ss');
+}
+
+function _monthLabel(year, month1Based) {
+    const d = new Date(year, month1Based - 1, 1);
+    const tz = Session.getScriptTimeZone();
+    return Utilities.formatDate(d, tz, 'MMMM yyyy');
+}
+
+function getVolunteerContributionMonth({ year, month } = {}) {
+    // month is 1-based (1=Jan). Defaults to current script-timezone month.
+    const tz = Session.getScriptTimeZone();
+    const now = new Date();
+    const defaultYear = parseInt(Utilities.formatDate(now, tz, 'yyyy'), 10);
+    const defaultMonth = parseInt(Utilities.formatDate(now, tz, 'M'), 10);
+
+    const y = year ? parseInt(year, 10) : defaultYear;
+    const m = month ? parseInt(month, 10) : defaultMonth;
+    if (!y || !m || m < 1 || m > 12) throw new Error('Invalid year/month');
+
+    const start = new Date(y, m - 1, 1);
+    const end = new Date(y, m, 1);
+
+    const sheet = getSheet(SHEET_NAMES.DROPS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+
+    const dateIdx = headers['Date'] - 1;
+    const weightIdx = headers['Net Weight (kg)'] - 1;
+    const inspectorIdx = headers['Inspector'] - 1;
+    const purityIdx = headers['Purity'] - 1;
+
+    const totalsByKey = {};
+    const displayNameByKey = {};
+    let totalKg = 0;
+    let totalCleanKg = 0;
+    let totalPartialKg = 0;
+    let totalUncleanKg = 0;
+
+    rows.forEach(r => {
+        const d = _coerceToDate(r[dateIdx]);
+        if (!d) return;
+        if (d < start || d >= end) return;
+
+        const kg = parseFloat(r[weightIdx]) || 0;
+        if (kg <= 0) return;
+
+        const rawName = (r[inspectorIdx] || '').toString().trim();
+        const displayName = rawName || '(Unassigned)';
+        const key = displayName.toLowerCase();
+
+        const purity = (r[purityIdx] || '').toString().trim();
+        if (!totalsByKey[key]) {
+            totalsByKey[key] = { totalKg: 0, cleanKg: 0, partialKg: 0, uncleanKg: 0 };
+        }
+        totalsByKey[key].totalKg += kg;
+        if (purity === 'Clean') {
+            totalsByKey[key].cleanKg += kg;
+            totalCleanKg += kg;
+        } else if (purity === 'Partial') {
+            totalsByKey[key].partialKg += kg;
+            totalPartialKg += kg;
+        } else if (purity === 'Unclean') {
+            totalsByKey[key].uncleanKg += kg;
+            totalUncleanKg += kg;
+        }
+
+        if (!displayNameByKey[key]) displayNameByKey[key] = displayName;
+        totalKg += kg;
+    });
+
+    const items = Object.keys(totalsByKey)
+        .map(k => ({
+            inspector: displayNameByKey[k],
+            totalKg: Math.round(totalsByKey[k].totalKg * 100) / 100,
+            cleanKg: Math.round(totalsByKey[k].cleanKg * 100) / 100,
+            partialKg: Math.round(totalsByKey[k].partialKg * 100) / 100,
+            uncleanKg: Math.round(totalsByKey[k].uncleanKg * 100) / 100
+        }))
+        .sort((a, b) => b.totalKg - a.totalKg || a.inspector.localeCompare(b.inspector));
+
+    const curY = defaultYear;
+    const curM = defaultMonth;
+    const isCurrentMonth = (y === curY && m === curM);
+    const monthLabel = _monthLabel(y, m);
+
+    return {
+        year: y,
+        month: m,
+        monthLabel,
+        totalKg: Math.round(totalKg * 100) / 100,
+        totalCleanKg: Math.round(totalCleanKg * 100) / 100,
+        totalPartialKg: Math.round(totalPartialKg * 100) / 100,
+        totalUncleanKg: Math.round(totalUncleanKg * 100) / 100,
+        isCurrentMonth,
+        items
+    };
 }

@@ -1,229 +1,1059 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>
-      :root{--accent:#0b6efd;--muted:#666}
-      body{font-family:Inter,Arial,Helvetica,sans-serif;margin:14px;color:#222}
-      h3{margin:0 0 12px}
-      .card{border:1px solid #e6e6e6;padding:12px;border-radius:8px;margin-bottom:12px}
-      label{display:block;margin-top:8px;font-size:13px}
-      input,select,button{margin-top:6px;padding:8px 10px;font-size:14px;border-radius:6px;border:1px solid #ddd}
-      button{background:var(--accent);color:#fff;border:none;cursor:pointer}
-      button.secondary{background:#f1f3f5;color:#111;border:1px solid #ddd}
-      .list-item{padding:8px;border-radius:6px;margin-top:6px;background:#fafafa;cursor:pointer}
-      .muted{color:var(--muted);font-size:13px}
-      .flex{display:flex;gap:8px;align-items:center}
-      .right{margin-left:auto}
-      .small{font-size:13px}
-      .notice{padding:8px;border-radius:6px;background:#fff4e5;border:1px solid #f5d7a6;color:#6b4a00}
 
-      /* modal */
-      .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center}
-      .modal{background:#fff;padding:16px;border-radius:10px;max-width:480px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
-      .modal h4{margin:0 0 8px}
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box
+    }
 
-      @media (min-width:640px){ .grid{display:grid;grid-template-columns:1fr 420px;gap:12px} }
-    </style>
-  </head>
-  <body>
-    <h3>Fishnet Recycling — Admin</h3>
+    :root {
+      --accent: #0b6efd;
+      --muted: #666
+    }
 
-    <div class="grid">
-      <div>
-        <div class="card">
-          <strong>Find Fisherman</strong>
-          <div class="flex" style="margin-top:8px">
-            <input id="searchQ" placeholder="Name or Person ID" style="flex:1" />
-            <button class="secondary" onclick="search()">Search</button>
+    body {
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      margin: 14px;
+      color: #222
+    }
+
+    h3 {
+      margin: 0 0 12px
+    }
+
+    .card {
+      border: 1px solid #e6e6e6;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px
+    }
+
+    label {
+      display: block;
+      margin-top: 8px;
+      font-size: 13px
+    }
+
+    input,
+    select,
+    button {
+      margin-top: 6px;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ddd
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer
+    }
+
+    button.secondary {
+      background: #f1f3f5;
+      color: #111;
+      border: 1px solid #ddd
+    }
+
+    button[disabled] {
+      opacity: 0.65;
+      cursor: default
+    }
+
+    .list-item {
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 6px;
+      background: #fafafa;
+      cursor: pointer
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    .flex {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .right {
+      margin-left: auto
+    }
+
+    .small {
+      font-size: 13px
+    }
+
+    .notice {
+      padding: 8px;
+      border-radius: 6px;
+      background: #fff4e5;
+      border: 1px solid #f5d7a6;
+      color: #6b4a00
+    }
+
+    .topbar {
+      background: #f97316;
+      color: #fff;
+      padding: 18px 16px;
+      border-radius: 0;
+      margin: -14px -14px 14px -14px
+    }
+
+    .topbar-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      line-height: 1.1
+    }
+
+    /* modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center
+    }
+
+    .modal {
+      background: #fff;
+      padding: 16px;
+      border-radius: 10px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12)
+    }
+
+    .modal h4 {
+      margin: 0 0 8px
+    }
+
+    .form {
+      margin-top: 10px
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 10px 12px;
+      align-items: center;
+      width: 100%
+    }
+
+    .field-name {
+      font-size: 13px;
+      color: #222
+    }
+
+    .field-value {
+      font-size: 13px;
+      min-width: 0
+    }
+
+    .form-grid>* {
+      min-width: 0
+    }
+
+    .form-grid input,
+    .form-grid select {
+      margin-top: 0;
+      width: 100%
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    .radio-option {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 13px
+    }
+
+    .form-grid .radio-group {
+      width: auto
+    }
+
+    .form-grid .radio-group input {
+      width: auto
+    }
+
+    @media (max-width:520px) {
+      .form-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    @media (min-width:640px) {
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        gap: 12px
+      }
+    }
+
+    .hidden {
+      display: none
+    }
+
+    .submit-btn {
+      background: #f97316;
+      font-weight: 700
+    }
+
+    .submit-btn[disabled] {
+      opacity: 1;
+      background: #fb923c
+    }
+
+    /* typeahead */
+    .typeahead {
+      position: relative
+    }
+
+    .typeahead-panel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      margin-top: 6px;
+      border: 1px solid #e6e6e6;
+      border-radius: 8px;
+      background: #fff;
+      max-height: 260px;
+      overflow: auto;
+      z-index: 20;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08)
+    }
+
+    .typeahead-empty {
+      padding: 10px 12px
+    }
+
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-title">Fishnet Recycling Management – Pomen Laut Projects</div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <strong>Find Fisherman</strong>
+        <div class="flex" style="margin-top:8px">
+          <div class="typeahead" style="flex:1">
+            <input id="searchQ" placeholder="Name or Person ID" style="width:100%" autocomplete="off" />
+            <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
           </div>
-          <div id="searchResults" style="margin-top:10px"></div>
+          <button class="secondary" onclick="search()">Search</button>
+          <button
+            onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">Register</button>
         </div>
-
-        <div class="card">
-          <strong>Log Drop-off</strong>
-          <div class="muted small">Click a fisherman from search to pre-fill. If none, register below.</div>
-          <label>Fisherman ID<input id="dropFishermanId" placeholder="Select or paste Person ID" /></label>
-          <label>Weight (kg)<input id="dropWeight" type="number" step="0.01" placeholder="e.g. 12.50" /></label>
-          <label>Purity
-            <select id="dropPurity">
-              <option>Clean</option>
-              <option>Partial</option>
-              <option>Unclean</option>
-            </select>
-          </label>
-          <label>Inspector<input id="dropInspector" placeholder="Inspector name" /></label>
-          <label>Notes<input id="dropNotes" placeholder="Optional notes" /></label>
-          <div class="flex" style="margin-top:10px">
-            <button onclick="logDrop()">Log Drop</button>
-            <button class="secondary" onclick="clearDropForm()">Clear</button>
-            <div id="dropResult" class="right muted small"></div>
-          </div>
-        </div>
+        <div id="searchResults" style="margin-top:10px"></div>
       </div>
 
-      <div>
-        <div class="card" id="activeDealCard">
-          <strong>Active Deal</strong>
-          <div id="activeDeal" class="muted small" style="margin-top:8px">Loading...</div>
-        </div>
+      <div class="card hidden" id="admitCard">
+        <strong>Admit Fishnet</strong>
 
-        <div class="card">
-          <strong>Pending Payment</strong>
-          <div id="pendingInfo" class="muted small" style="margin-top:8px">Select a fisherman to view pending payment.</div>
-        </div>
+        <div class="form">
+          <div class="form-grid">
+            <div class="field-name"><b>Fisherman</b></div>
+            <div class="field-value"><b id="dropFishermanName" class="muted">None selected</b></div>
 
-        <div class="card">
-          <strong>Quick Register</strong>
-          <div class="muted small">Use this to register a fisherman quickly (for first-time visitors).</div>
-          <label>Full name<input id="regName" /></label>
-          <label>Phone<input id="regPhone" /></label>
-          <label>Village<input id="regVillage" /></label>
-          <div style="margin-top:8px" class="flex">
-            <button onclick="registerFromPanel()">Register</button>
-            <div id="regResult" class="muted small right"></div>
+            <div class="field-name"><b>Fisherman ID</b></div>
+            <div class="field-value"><span id="dropFishermanIdText" class="muted">—</span></div>
+
+            <div class="field-name">Unpaid pending (kg)</div>
+            <div class="field-value"><span id="dropPendingWeight" class="muted">—</span></div>
+
+            <div class="field-name">Weight (kg)</div>
+            <input id="dropWeight" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 12" />
+
+            <div class="field-name">Purity</div>
+            <div id="dropPurityGroup" class="radio-group">
+              <label class="radio-option"><input type="radio" name="dropPurity" value="Clean" checked /> Clean</label>
+              <label class="radio-option"><input type="radio" name="dropPurity" value="Partial" /> Partial</label>
+              <label class="radio-option"><input type="radio" name="dropPurity" value="Unclean" /> Unclean</label>
+            </div>
+
+            <div class="field-name">Inspector</div>
+            <input id="dropInspector" placeholder="Inspector name" />
+
+            <div class="field-name">Notes</div>
+            <input id="dropNotes" placeholder="Optional notes" />
           </div>
+        </div>
+        <div class="flex" style="margin-top:10px">
+          <button id="dropSubmitBtn" class="submit-btn" onclick="logDrop()">Submit</button>
+          <button class="secondary" onclick="clearDropForm()">Clear</button>
         </div>
       </div>
     </div>
 
-    <!-- register modal (shown when search yields no results) -->
-    <div id="modalBackdrop" class="modal-backdrop">
-      <div class="modal" role="dialog" aria-modal="true">
-        <h4>Register Fisherman</h4>
-        <label>Full name<input id="mRegName" /></label>
-        <label>Phone<input id="mRegPhone" /></label>
-        <label>Village<input id="mRegVillage" /></label>
-        <div style="margin-top:10px" class="flex">
-          <button onclick="registerFromModal()">Create & Use</button>
-          <button class="secondary" onclick="closeModal()">Cancel</button>
-          <div id="mRegResult" class="muted small right"></div>
+    <div>
+      <div class="card" id="activeDealCard">
+        <strong>Active Deal</strong>
+        <div id="activeDeal" class="muted small" style="margin-top:8px">Loading...</div>
+      </div>
+
+      <div class="card">
+        <div class="muted" style="margin-top:8px;font-size:16px;font-weight:800">Due payments</div>
+        <div id="dueInfo" class="muted small" style="margin-top:6px">Loading...</div>
+        <div id="dueList" style="margin-top:10px"></div>
+
+        <div style="height:1px;background:#eee;margin:12px 0"></div>
+
+        <div class="flex" style="margin-top:6px">
+          <div class="muted" style="font-size:16px;font-weight:800">Payment explorer</div>
+          <div class="right" style="text-align:right">
+            <div class="flex" style="gap:6px;justify-content:flex-end">
+              <button id="paidPrev" class="secondary" onclick="paidPrevMonth()">←</button>
+              <button id="paidNext" class="secondary" onclick="paidNextMonth()">→</button>
+            </div>
+            <div id="paidMonthLabel" class="muted small" style="margin-top:6px">Loading...</div>
+          </div>
+        </div>
+
+        <div id="paidInfo" class="muted small" style="margin-top:6px">Loading...</div>
+        <div id="paidList" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <div class="flex">
+          <strong>Volunteer contribution</strong>
+          <div class="right" style="text-align:right">
+            <div class="flex" style="gap:6px;justify-content:flex-end">
+              <button id="volPrev" class="secondary" onclick="volPrevMonth()">←</button>
+              <button id="volNext" class="secondary" onclick="volNextMonth()">→</button>
+            </div>
+            <div id="volMonthLabel" class="muted small" style="margin-top:6px">Loading...</div>
+          </div>
+        </div>
+        <div id="volSummary" class="muted small" style="margin-top:6px"></div>
+        <div id="volList" style="margin-top:10px"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- register modal (shown when search yields no results) -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h4>Register Fisherman</h4>
+      <div class="form">
+        <div class="form-grid">
+          <div class="field-name">Full name</div>
+          <input id="mRegName" />
+
+          <div class="field-name">Phone</div>
+          <input id="mRegPhone" />
+
+          <div class="field-name">Village</div>
+          <input id="mRegVillage" />
         </div>
       </div>
+      <div style="margin-top:10px" class="flex">
+        <button id="mRegSubmit" onclick="registerFromModal()">Create & Use</button>
+        <button class="secondary" onclick="closeModal()">Cancel</button>
+        <div id="mRegResult" class="muted small right"></div>
+      </div>
     </div>
+  </div>
 
-    <script>
-      let lastSelectedFisherman = null;
+  <script>
+    let lastSelectedFisherman = null;
+    let modalCloseTimer = null;
+    let volMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    let paidMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    let selectedFishermanId = '';
 
-      function onSuccessAsync(handler){
-        return google.script.run.withSuccessHandler(handler).withFailureHandler(err=>{
-          alert('Error: ' + (err.message || err));
+    let fishermenCache = [];
+    let fishermenLoaded = false;
+    let typeaheadHideTimer = null;
+
+    function setAdmitVisible(isVisible) {
+      const card = document.getElementById('admitCard');
+      if (!card) return;
+      card.classList.toggle('hidden', !isVisible);
+    }
+
+    function onSuccessAsync(handler) {
+      return google.script.run.withSuccessHandler(handler).withFailureHandler(err => {
+        alert('Error: ' + (err.message || err));
+      });
+    }
+
+    function loadActiveDeal() {
+      onSuccessAsync(deal => {
+        const el = document.getElementById('activeDeal');
+        if (!deal) { el.innerHTML = '<div class="notice">No active deal configured.</div>'; return; }
+        el.innerHTML = '<div class="small"><b>Threshold:</b> ' + deal.data.thresholdKg + ' kg</div>' +
+          '<div class="small"><b>Rates (RM/kg):</b> Clean ' + deal.data.rateClean + ', Partial ' + deal.data.ratePartial + ', Unclean ' + deal.data.rateUnclean + '</div>';
+      }).getActiveDeal();
+    }
+
+    function search() {
+      const q = document.getElementById('searchQ').value.trim();
+      const container = document.getElementById('searchResults');
+
+      // Prefer cached search for typeahead UX; fallback to server if cache not ready.
+      if (fishermenLoaded) {
+        const list = filterFishermen(q, 30);
+        renderSearchResults(container, list);
+        renderTypeahead(list, q);
+        return;
+      }
+
+      container.innerHTML = 'Searching...';
+      onSuccessAsync(list => {
+        if (!Array.isArray(list)) {
+          container.innerHTML = '<div class="notice">Unexpected search response. Open DevTools console for details.</div>';
+          try { console.error('findFishermen unexpected payload:', list); } catch (e) { }
+          return;
+        }
+        renderSearchResults(container, list);
+      }).findFishermen(q);
+    }
+
+    function renderSearchResults(container, list) {
+      container.innerHTML = '';
+      if (!list || list.length === 0) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'muted';
+        wrapper.innerHTML = '<div>No matches.</div><div class="small" style="margin-top:6px">Use <b>Register</b> to add a new fisherman.</div>';
+        container.appendChild(wrapper);
+        return;
+      }
+      list.forEach(l => {
+        const d = document.createElement('div');
+        d.className = 'list-item';
+        d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + escapeHtml(l.personId) + ' — ' + escapeHtml(l.village || '') + ' — ' + escapeHtml(l.phone || '') + '</div>';
+        d.onclick = () => { selectFisherman(l); hideTypeahead(); };
+        container.appendChild(d);
+      });
+    }
+
+    function filterFishermen(q, limit) {
+      const query = (q || '').toString().trim().toLowerCase();
+      if (!query) return [];
+      const results = [];
+      for (let i = 0; i < fishermenCache.length; i++) {
+        const f = fishermenCache[i];
+        const id = (f.personId || '').toString().toLowerCase();
+        const name = (f.fullName || '').toString().toLowerCase();
+        if (id.indexOf(query) !== -1 || name.indexOf(query) !== -1) {
+          results.push(f);
+          if (limit && results.length >= limit) break;
+        }
+      }
+      return results;
+    }
+
+    function showTypeahead() {
+      const panel = document.getElementById('typeaheadPanel');
+      panel.style.display = 'block';
+    }
+
+    function hideTypeahead() {
+      const panel = document.getElementById('typeaheadPanel');
+      panel.style.display = 'none';
+      panel.innerHTML = '';
+    }
+
+    function renderTypeahead(list, q) {
+      const panel = document.getElementById('typeaheadPanel');
+      const query = (q || '').toString().trim();
+      if (!query) {
+        hideTypeahead();
+        return;
+      }
+      panel.innerHTML = '';
+      showTypeahead();
+
+      if (!list || list.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'typeahead-empty muted small';
+        empty.innerHTML = 'No matches. Use <b>Register</b> to add a new fisherman.';
+        panel.appendChild(empty);
+        return;
+      }
+
+      list.slice(0, 8).forEach(l => {
+        const d = document.createElement('div');
+        d.className = 'list-item';
+        d.style.marginTop = '0';
+        d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + escapeHtml(l.personId) + ' — ' + escapeHtml(l.village || '') + '</div>';
+        d.onmousedown = (e) => {
+          // use mousedown so selection happens before input blur
+          e.preventDefault();
+          selectFisherman(l);
+          document.getElementById('searchQ').value = l.fullName;
+          hideTypeahead();
+        };
+        panel.appendChild(d);
+      });
+    }
+
+    function escapeHtml(s) { return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    function parseDMYDateTime(s) {
+      // Accepts "DD/MM/YYYY HH:MM:SS" (or without time). Returns Date or null.
+      const str = (s || '').toString().trim();
+      if (!str) return null;
+      const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (!m) return null;
+      const dd = parseInt(m[1], 10);
+      const mm = parseInt(m[2], 10);
+      const yyyy = parseInt(m[3], 10);
+      const hh = m[4] ? parseInt(m[4], 10) : 0;
+      const mi = m[5] ? parseInt(m[5], 10) : 0;
+      const ss = m[6] ? parseInt(m[6], 10) : 0;
+      const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    }
+
+    function formatPaymentExplorerDateTime(s) {
+      // UI format: "17 Nov 2025 17:35" (24h)
+      const d = parseDMYDateTime(s);
+      if (!d) return (s || '').toString();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const dd = d.getDate();
+      const mon = months[d.getMonth()] || '';
+      const yyyy = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return dd + ' ' + mon + ' ' + yyyy + ' ' + hh + ':' + mm;
+    }
+
+    function monthKeyFromDate(d) {
+      if (!d) return 'Unknown';
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      return y + '-' + (m < 10 ? ('0' + m) : ('' + m));
+    }
+
+    function monthLabelFromKey(k) {
+      if (!k || k === 'Unknown') return 'Unknown month';
+      const parts = (k + '').split('-');
+      if (parts.length !== 2) return 'Unknown month';
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = new Date(y, (m || 1) - 1, 1);
+      try {
+        return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+      } catch (e) {
+        return (m + '/' + y);
+      }
+    }
+
+    function formatKg(v) {
+      const n = parseFloat(v);
+      if (!isFinite(n)) return '0';
+      const rounded = Math.round(n * 100) / 100;
+      return (rounded % 1 === 0) ? ('' + rounded.toFixed(0)) : ('' + rounded.toFixed(2));
+    }
+
+    function selectFisherman(f) {
+      lastSelectedFisherman = f;
+      selectedFishermanId = (f.personId || '').toString();
+
+      const idText = document.getElementById('dropFishermanIdText');
+      if (idText) idText.innerText = selectedFishermanId || '—';
+
+      const nameEl = document.getElementById('dropFishermanName');
+      if (nameEl) {
+        const nm = f && f.fullName ? (f.fullName + '').toString() : '';
+        nameEl.innerText = nm || 'None selected';
+      }
+
+      const pendingEl = document.getElementById('dropPendingWeight');
+      if (pendingEl) pendingEl.innerText = selectedFishermanId ? 'Loading…' : '—';
+      if (selectedFishermanId) {
+        google.script.run
+          .withSuccessHandler(res => {
+            const kg = res && typeof res.pendingKg !== 'undefined' ? res.pendingKg : 0;
+            if (pendingEl) pendingEl.innerText = (kg || 0) + ' kg';
+          })
+          .withFailureHandler(err => {
+            if (pendingEl) pendingEl.innerText = '—';
+            try { console.error(err); } catch (e) { }
+          })
+          .getPendingPaymentSummary(selectedFishermanId);
+      }
+
+      setAdmitVisible(!!selectedFishermanId);
+    }
+
+    function attachDropWeightDigitsOnly() {
+      const el = document.getElementById('dropWeight');
+      if (!el) return;
+      el.addEventListener('input', () => {
+        const v = (el.value || '').toString();
+        const cleaned = v.replace(/\D+/g, '');
+        if (v !== cleaned) el.value = cleaned;
+      });
+    }
+
+    function openRegisterModal({ prefillName }) {
+      if (modalCloseTimer) {
+        clearTimeout(modalCloseTimer);
+        modalCloseTimer = null;
+      }
+      document.getElementById('mRegName').value = (prefillName || '').toString();
+      document.getElementById('mRegPhone').value = '';
+      document.getElementById('mRegVillage').value = '';
+      document.getElementById('mRegResult').innerText = '';
+      const submit = document.getElementById('mRegSubmit');
+      submit.disabled = false;
+      submit.textContent = 'Create & Use';
+      document.getElementById('modalBackdrop').style.display = 'flex';
+    }
+
+    function closeModal() {
+      if (modalCloseTimer) {
+        clearTimeout(modalCloseTimer);
+        modalCloseTimer = null;
+      }
+      document.getElementById('modalBackdrop').style.display = 'none';
+      document.getElementById('mRegResult').innerText = '';
+    }
+
+    function registerFromModal() {
+      const fullName = document.getElementById('mRegName').value;
+      const phone = document.getElementById('mRegPhone').value;
+      const village = document.getElementById('mRegVillage').value;
+      if (!fullName) return alert('Name required');
+
+      const submit = document.getElementById('mRegSubmit');
+      submit.disabled = true;
+      submit.textContent = 'Creating…';
+
+      // Close the modal shortly after click (do not wait for success)
+      if (modalCloseTimer) clearTimeout(modalCloseTimer);
+      modalCloseTimer = setTimeout(() => {
+        closeModal();
+      }, 2000);
+
+      onSuccessAsync(res => {
+        // keep local typeahead list up to date + select the new fisherman
+        try {
+          const newF = {
+            personId: (res.personId || '').toString(),
+            fullName: (res.fullName || fullName || '').toString(),
+            phone: (res.phone || phone || '').toString(),
+            village: (res.village || village || '').toString(),
+            registryDate: res.registryDate || ''
+          };
+          if (newF.personId) {
+            const exists = fishermenCache.some(f => (f.personId + '') === (newF.personId + ''));
+            if (!exists) fishermenCache.unshift(newF);
+            fishermenLoaded = true;
+          }
+
+          // select the newly created fisherman
+          selectFisherman(newF);
+          const q = document.getElementById('searchQ');
+          if (q) q.value = newF.fullName || '';
+        } catch (e) { }
+
+        // refresh full list used by typeahead
+        refreshFishermenCacheSilently();
+
+        loadPaymentExplorer();
+      }).registerFisherman({ fullName, phone, village });
+    }
+
+    function loadFishermenCache() {
+      fishermenLoaded = false;
+      onSuccessAsync(list => {
+        if (!Array.isArray(list)) {
+          fishermenCache = [];
+          fishermenLoaded = false;
+          try { console.error('getFishermen unexpected payload:', list); } catch (e) { }
+          return;
+        }
+        fishermenCache = list;
+        fishermenLoaded = true;
+      }).getFishermen();
+    }
+
+    function refreshFishermenCacheSilently() {
+      onSuccessAsync(list => {
+        if (!Array.isArray(list)) return;
+        fishermenCache = list;
+        fishermenLoaded = true;
+      }).getFishermen();
+    }
+
+    function attachTypeaheadHandlers() {
+      const input = document.getElementById('searchQ');
+      if (!input) return;
+      input.addEventListener('input', () => {
+        const q = input.value;
+        const list = filterFishermen(q, 50);
+        renderTypeahead(list, q);
+      });
+      input.addEventListener('focus', () => {
+        const q = input.value;
+        const list = filterFishermen(q, 50);
+        renderTypeahead(list, q);
+      });
+      input.addEventListener('blur', () => {
+        if (typeaheadHideTimer) clearTimeout(typeaheadHideTimer);
+        typeaheadHideTimer = setTimeout(() => hideTypeahead(), 120);
+      });
+    }
+
+    function loadPaymentExplorer() {
+      loadDuePayments();
+      loadPaidPayments();
+    }
+
+    function loadDuePayments() {
+      const info = document.getElementById('dueInfo');
+      const list = document.getElementById('dueList');
+      info.innerText = 'Loading...';
+      list.innerHTML = '';
+
+      onSuccessAsync(rows => {
+        list.innerHTML = '';
+        if (!rows || rows.length === 0) {
+          info.innerText = 'No payments due.';
+          return;
+        }
+        info.innerText = '';
+
+        rows.forEach(p => {
+          const d = document.createElement('div');
+          d.className = 'list-item';
+          d.style.cursor = 'default';
+
+          const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
+          const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
+          const village = p.fishermanVillage ? (' — ' + escapeHtml(p.fishermanVillage)) : '';
+          const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
+          const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
+
+          d.innerHTML =
+            '<div class="flex">' +
+            '<div><b>' + name + '</b><span class="muted">' + phone + '</span></div>' +
+            '<div class="right" style="text-align:right">' +
+            payloadBlock +
+            '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="small muted">Village: ' + escapeHtml(p.fishermanVillage || '') + '</div>' +
+            '<div class="small muted">Payment: ' + escapeHtml(p.paymentId || '') + ' • Fisherman ID: ' + escapeHtml(p.fishermanId || '') + '</div>' +
+            '<div class="flex" style="margin-top:8px">' +
+            '<button class="secondary" data-confirm-payment="' + escapeHtml(p.paymentId) + '">Confirm payment</button>' +
+            '<div class="right muted small" data-confirm-result></div>' +
+            '</div>';
+
+          const confirmBtn = d.querySelector('button[data-confirm-payment]');
+          const confirmResult = d.querySelector('[data-confirm-result]');
+          confirmBtn.onclick = () => {
+            confirmBtn.disabled = true;
+            const prev = confirmBtn.textContent;
+            confirmBtn.textContent = 'Confirming…';
+            google.script.run
+              .withSuccessHandler(() => {
+                confirmResult.innerText = 'Paid.';
+                loadPaymentExplorer();
+              })
+              .withFailureHandler(err => {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = prev;
+                alert('Error: ' + (err.message || err));
+              })
+              .confirmPayment(p.paymentId);
+          };
+
+          list.appendChild(d);
         });
+      }).getDuePayments();
+    }
+
+    function loadPaidPayments() {
+      const info = document.getElementById('paidInfo');
+      const list = document.getElementById('paidList');
+      info.innerText = 'Loading...';
+      list.innerHTML = '';
+
+      onSuccessAsync(rows => {
+        list.innerHTML = '';
+
+        // Month label + next button state (similar to volunteer panel)
+        try {
+          const d = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth(), 1);
+          document.getElementById('paidMonthLabel').innerText = d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+        } catch (e) {
+          document.getElementById('paidMonthLabel').innerText = 'Selected month';
+        }
+        try {
+          const cur = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+          const isCurrentMonth = (paidMonthCursor.getFullYear() === cur.getFullYear() && paidMonthCursor.getMonth() === cur.getMonth());
+          document.getElementById('paidNext').disabled = !!isCurrentMonth;
+        } catch (e) { }
+
+        if (!rows || rows.length === 0) {
+          info.innerText = 'No paid payments yet.';
+          return;
+        }
+        info.innerText = '';
+
+        const cursorKey = monthKeyFromDate(paidMonthCursor);
+        const monthRows = rows.filter(p => monthKeyFromDate(parseDMYDateTime(p.date)) === cursorKey);
+        if (monthRows.length === 0) {
+          info.innerText = 'No paid payments for this month.';
+          return;
+        }
+
+        monthRows.forEach(p => {
+          const d = document.createElement('div');
+          d.className = 'list-item';
+          d.style.cursor = 'default';
+
+          const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
+          const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
+          const when = p.date ? escapeHtml(formatPaymentExplorerDateTime(p.date)) : '';
+
+          const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
+          const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
+
+          d.innerHTML =
+            '<div class="flex">' +
+            '<div><b>' + name + '</b><span class="muted">' + phone + '</span></div>' +
+            '<div class="right" style="text-align:right">' +
+            payloadBlock +
+            '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="small muted">' + (when ? when : '') + '</div>' +
+            '<div class="small muted">Payment: ' + escapeHtml(p.paymentId || '') + ' • Fisherman ID: ' + escapeHtml(p.fishermanId || '') + '</div>' +
+            '<div class="flex" style="margin-top:8px">' +
+            '<button class="secondary" data-audit-payment="' + escapeHtml(p.paymentId) + '">View drop-offs</button>' +
+            '<div class="right muted small" data-audit-status></div>' +
+            '</div>' +
+            '<div class="small" data-audit-panel style="margin-top:8px;display:none"></div>';
+
+          const btn = d.querySelector('button[data-audit-payment]');
+          const statusEl = d.querySelector('[data-audit-status]');
+          const panel = d.querySelector('[data-audit-panel]');
+
+          btn.onclick = () => {
+            const isVisible = panel.style.display !== 'none';
+            if (isVisible) {
+              panel.style.display = 'none';
+              btn.textContent = 'View drop-offs';
+              statusEl.innerText = '';
+              return;
+            }
+
+            btn.disabled = true;
+            const prev = btn.textContent;
+            btn.textContent = 'Loading…';
+            statusEl.innerText = '';
+
+            google.script.run
+              .withSuccessHandler(drops => {
+                btn.disabled = false;
+                btn.textContent = 'Hide drop-offs';
+                panel.style.display = 'block';
+
+                if (!drops || drops.length === 0) {
+                  panel.innerHTML = '<div class="muted">No drop-offs tagged with this payment.</div>';
+                  return;
+                }
+
+                const lines = drops.map(x => {
+                  const date = x.date ? escapeHtml(x.date) : '';
+                  const w = formatKg(x.netWeightKg || 0) + ' kg';
+                  const purity = x.purity ? escapeHtml(x.purity) : '';
+                  const inspector = x.inspector ? escapeHtml(x.inspector) : '';
+                  const notes = x.notes ? escapeHtml(x.notes) : '';
+                  const parts = [];
+                  if (date) parts.push(date);
+                  parts.push(w);
+                  if (purity) parts.push('Purity: ' + purity);
+                  if (inspector) parts.push('Inspector: ' + inspector);
+                  if (notes) parts.push('Notes: ' + notes);
+                  const dropId = x.dropId ? escapeHtml(x.dropId) : '';
+                  return '<div style="padding:8px;border:1px solid #e6e6e6;border-radius:8px;margin-top:6px;background:#fff">' +
+                    '<div><b>' + dropId + '</b></div>' +
+                    '<div class="small">' + parts.join(' • ') + '</div>' +
+                    '</div>';
+                });
+                panel.innerHTML = lines.join('');
+              })
+              .withFailureHandler(err => {
+                btn.disabled = false;
+                btn.textContent = prev;
+                alert('Error: ' + (err.message || err));
+              })
+              .getDropoffsByPaymentId(p.paymentId);
+          };
+
+          list.appendChild(d);
+        });
+      }).getPaidPayments();
+    }
+
+    function paidPrevMonth() {
+      paidMonthCursor = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth() - 1, 1);
+      loadPaidPayments();
+    }
+
+    function paidNextMonth() {
+      paidMonthCursor = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth() + 1, 1);
+      loadPaidPayments();
+    }
+
+    function getSelectedDropPurity() {
+      const el = document.querySelector('input[name="dropPurity"]:checked');
+      return el ? el.value : 'Clean';
+    }
+
+
+    function logDrop() {
+      const fishermanId = (selectedFishermanId || '').toString().trim();
+      const weightStr = (document.getElementById('dropWeight').value || '').toString().replace(/\D+/g, '');
+      const netWeight = parseInt(weightStr, 10);
+      if (!fishermanId) return alert('Fisherman ID required');
+      if (!netWeight || netWeight <= 0) return alert('Weight must be > 0');
+      const purity = getSelectedDropPurity();
+      const inspector = (document.getElementById('dropInspector').value || '').toString().trim();
+      if (!inspector) return alert('Inspector is required');
+      const notes = document.getElementById('dropNotes').value;
+
+      const submitBtn = document.getElementById('dropSubmitBtn');
+      const prevText = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting…';
       }
 
-      function loadActiveDeal(){
-        onSuccessAsync(deal => {
-          const el = document.getElementById('activeDeal');
-          if (!deal){ el.innerHTML = '<div class="notice">No active deal configured.</div>'; return; }
-          el.innerHTML = '<div><b>Deal:</b> ' + deal.data.dealId + '</div>' +
-            '<div class="small">Threshold: ' + deal.data.thresholdKg + ' kg</div>' +
-            '<div class="small">Rates: Clean ' + deal.data.rateClean + ' RM/kg, Partial ' + deal.data.ratePartial + ', Unclean ' + deal.data.rateUnclean + '</div>';
-        }).getActiveDeal();
-      }
-
-      function search(){
-        const q = document.getElementById('searchQ').value.trim();
-        const container = document.getElementById('searchResults');
-        container.innerHTML = 'Searching...';
-        onSuccessAsync(list => {
-          container.innerHTML = '';
-          if (!list || list.length===0){
-            container.innerHTML = '<div class="muted">No matches. <a href="#" onclick="openModalFromSearch()">Register new fisherman</a></div>';
-            return;
-          }
-          list.forEach(l=>{
-            const d = document.createElement('div');
-            d.className = 'list-item';
-            d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + l.personId + ' — ' + (l.village||'') + ' — ' + (l.phone||'') + '</div>';
-            d.onclick = ()=>{ selectFisherman(l); };
-            container.appendChild(d);
-          });
-        }).findFishermen(q);
-      }
-
-      function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-      function selectFisherman(f){
-        lastSelectedFisherman = f;
-        document.getElementById('dropFishermanId').value = f.personId;
-        document.getElementById('regResult').innerText = '';
-        loadPending(f.personId);
-      }
-
-      function openModalFromSearch(){
-        document.getElementById('mRegName').value = document.getElementById('searchQ').value || '';
-        document.getElementById('modalBackdrop').style.display = 'flex';
-      }
-      function closeModal(){ document.getElementById('modalBackdrop').style.display = 'none'; document.getElementById('mRegResult').innerText=''; }
-
-      function registerFromModal(){
-        const fullName = document.getElementById('mRegName').value;
-        const phone = document.getElementById('mRegPhone').value;
-        const village = document.getElementById('mRegVillage').value;
-        if (!fullName) return alert('Name required');
-        onSuccessAsync(res=>{
-          document.getElementById('mRegResult').innerText = 'Created: ' + res.personId;
-          document.getElementById('dropFishermanId').value = res.personId;
-          closeModal();
-          loadPending(res.personId);
-        }).registerFisherman({fullName, phone, village});
-      }
-
-      function registerFromPanel(){
-        const fullName = document.getElementById('regName').value;
-        const phone = document.getElementById('regPhone').value;
-        const village = document.getElementById('regVillage').value;
-        if (!fullName) return alert('Name required');
-        onSuccessAsync(res=>{
-          document.getElementById('regResult').innerText = 'Created: ' + res.personId;
-          document.getElementById('dropFishermanId').value = res.personId;
-          document.getElementById('regName').value='';document.getElementById('regPhone').value='';document.getElementById('regVillage').value='';
-          loadPending(res.personId);
-        }).registerFisherman({fullName, phone, village});
-      }
-
-      function loadPending(personId){
-        document.getElementById('pendingInfo').innerHTML = 'Loading...';
-        onSuccessAsync(p => {
-          const el = document.getElementById('pendingInfo');
-          if (!p){ el.innerHTML = '<div class="muted">No payments found.</div>'; return; }
-          el.innerHTML = '<div><b>Payment:</b> ' + p.data.paymentId + '</div>' +
-            '<div class="small">Status: ' + p.data.status + '</div>' +
-            '<div class="small">Accumulated: ' + p.data.accumulatedKg + ' kg</div>' +
-            (p.data.payload ? ('<div class="small">Payload: ' + p.data.payload + ' RM</div>') : '');
-        }).getLatestPayment(personId);
-      }
-
-      function logDrop(){
-        const fishermanId = document.getElementById('dropFishermanId').value.trim();
-        const netWeight = parseFloat(document.getElementById('dropWeight').value);
-        if (!fishermanId) return alert('Fisherman ID required');
-        if (!netWeight || netWeight <= 0) return alert('Weight must be > 0');
-        const purity = document.getElementById('dropPurity').value;
-        const inspector = document.getElementById('dropInspector').value;
-        const notes = document.getElementById('dropNotes').value;
-        document.getElementById('dropResult').innerText = 'Saving...';
-        onSuccessAsync(res=>{
+      google.script.run
+        .withSuccessHandler(res => {
           const r = res.allocationResult || res;
-          let msg = 'Drop logged: ' + res.dropId + '. ' + (r.status || '');
-          if (r.status === 'payment_due'){
-            msg += ' Payment due: ' + (r.payoutRM || '(computed)') + ' RM — please review Payment History.';
-          } else if (r.status === 'paid'){
-            msg += ' Paid: ' + (r.payoutRM || '(computed)') + ' RM';
-          } else if (r.status === 'pending'){
-            msg += ' Accumulated: ' + (r.accumulatedKg || '') + ' kg';
+          document.getElementById('dropWeight').value = ''; document.getElementById('dropNotes').value = '';
+          loadPaymentExplorer();
+          loadVolunteerContribution();
+          // refresh pending display after allocation
+          try { selectFisherman(lastSelectedFisherman || { personId: fishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
+
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = prevText || 'Submit';
           }
-          document.getElementById('dropResult').innerText = msg;
-          document.getElementById('dropWeight').value=''; document.getElementById('dropNotes').value='';
-          loadPending(fishermanId);
-        }).logDropAndProcess({fishermanId, netWeight, purity, inspector, notes});
-      }
+        })
+        .withFailureHandler(err => {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = prevText || 'Submit';
+          }
+          alert('Error: ' + (err.message || err));
+        })
+        .logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes });
+    }
 
-      function clearDropForm(){ document.getElementById('dropFishermanId').value=''; document.getElementById('dropWeight').value=''; document.getElementById('dropInspector').value=''; document.getElementById('dropNotes').value=''; document.getElementById('dropResult').innerText=''; }
+    function clearDropForm() {
+      selectedFishermanId = '';
+      lastSelectedFisherman = null;
 
-      // init
-      loadActiveDeal();
-    </script>
-  </body>
+      const idText = document.getElementById('dropFishermanIdText');
+      if (idText) idText.innerText = '—';
+      const nameEl = document.getElementById('dropFishermanName');
+      if (nameEl) nameEl.innerText = 'None selected';
+      const pendingEl = document.getElementById('dropPendingWeight');
+      if (pendingEl) pendingEl.innerText = '—';
+
+      document.getElementById('dropWeight').value = '';
+      document.getElementById('dropInspector').value = '';
+      document.getElementById('dropNotes').value = '';
+
+      const clean = document.querySelector('input[name="dropPurity"][value="Clean"]');
+      if (clean) clean.checked = true;
+      setAdmitVisible(false);
+    }
+
+    function loadVolunteerContribution() {
+      const y = volMonthCursor.getFullYear();
+      const m = volMonthCursor.getMonth() + 1;
+      document.getElementById('volMonthLabel').innerText = 'Loading...';
+      document.getElementById('volSummary').innerText = '';
+      document.getElementById('volList').innerHTML = '';
+
+      onSuccessAsync(res => {
+        document.getElementById('volMonthLabel').innerText = res.monthLabel;
+        document.getElementById('volSummary').innerText =
+          'Total: ' + (res.totalKg || 0) + ' kg' +
+          ' (Clean ' + (res.totalCleanKg || 0) + ', Partial ' + (res.totalPartialKg || 0) + ', Unclean ' + (res.totalUncleanKg || 0) + ')';
+
+        const nextBtn = document.getElementById('volNext');
+        nextBtn.disabled = !!res.isCurrentMonth;
+
+        const list = document.getElementById('volList');
+        if (!res.items || res.items.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'muted small';
+          empty.innerText = 'No drop-offs logged for this month.';
+          list.appendChild(empty);
+          return;
+        }
+
+        res.items.forEach(it => {
+          const row = document.createElement('div');
+          row.className = 'list-item';
+          row.style.cursor = 'default';
+          row.innerHTML =
+            '<div class="flex">' +
+            '<div><b>' + escapeHtml(it.inspector) + '</b></div>' +
+            '<div class="right"><b>' + (it.totalKg || 0) + ' kg</b></div>' +
+            '</div>' +
+            '<div class="small muted">Clean ' + (it.cleanKg || 0) + ' • Partial ' + (it.partialKg || 0) + ' • Unclean ' + (it.uncleanKg || 0) + '</div>';
+          list.appendChild(row);
+        });
+      }).getVolunteerContributionMonth({ year: y, month: m });
+    }
+
+    function volPrevMonth() {
+      volMonthCursor = new Date(volMonthCursor.getFullYear(), volMonthCursor.getMonth() - 1, 1);
+      loadVolunteerContribution();
+    }
+
+    function volNextMonth() {
+      volMonthCursor = new Date(volMonthCursor.getFullYear(), volMonthCursor.getMonth() + 1, 1);
+      loadVolunteerContribution();
+    }
+
+    // init
+    loadActiveDeal();
+    loadFishermenCache();
+    attachTypeaheadHandlers();
+    attachDropWeightDigitsOnly();
+    loadVolunteerContribution();
+    loadPaymentExplorer();
+    setAdmitVisible(false);
+  </script>
+</body>
+
 </html>

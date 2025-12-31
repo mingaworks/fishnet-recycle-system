@@ -1,59 +1,124 @@
-# Pomen Laut — Fishnet Recycling Admin (Google Sheets + Apps Script)
+# Pomen Laut — Fishnet Recycling Management
 
-Small admin webapp that helps staff register fishermen, log fishnet drop-offs, and track payouts.
+This project is used by [Pomen Laut](http://pomenlautprojects.org/) staff to run day-to-day fishnet recycling operations from a single Google Spreadsheet. It provides a simple web UI (Apps Script Web App) for consistent data entry, automated payment allocation, and auditability of payouts.
 
-## Overview
-- Frontend: `Index.html` (Apps Script HTMLService) — simple admin UI for searching, registering, and logging drops.
-- Backend: `Code.gs` — Apps Script server code that manages sheet I/O, allocation logic, and payout preparation.
-- Data store: single Google Spreadsheet with four sheets (see below).
+Administrative Web Application for:
+- Registering fishermen
+- Logging fishnet drop-offs
+- Automatically allocating drop-offs into payments
+- Confirming payouts and auditing which drop-offs contributed
+- Viewing monthly volunteer (inspector) contributions
+## What’s in this repo
+- `Index.html`: Admin UI (search/typeahead, register modal, admit fishnet, payments, volunteer contribution)
+- `Code.gs`: Backend (Sheets I/O, allocation logic, payment querying/confirmation, volunteer contribution summary)
 
-## Required Sheets & Exact Headers
-Create a Google Spreadsheet and add these sheets (names must match):
+## Spreadsheet setup
 
-- Fishermen Registry
-  - Person ID | Full Name | Phone | Village | Registry Date
-- Deals
-  - Deal ID | Threshold (kg) | Rate Clean (RM/kg) | Rate Partial (RM/kg) | Rate Unclean (RM/kg) | Created Date
-- Payment History
-  - Payment ID | Fisherman ID | Status | Accumulated Weight (kg) | Payload (RM) | Deal ID | Date
-- Drop-off Log
-  - Drop ID | Fisherman ID | Date | Net Weight (kg) | Purity | Inspector | Notes | Payment ID
+Create one Google Spreadsheet and add these sheet tabs (names must match exactly):
+
+### Fishermen Registry
+Headers:
+- Person ID | Full Name | Phone | Village | Registry Date
+
+### Deals
+Headers:
+- Deal ID | Threshold (kg) | Rate Clean (RM/kg) | Rate Partial (RM/kg) | Rate Unclean (RM/kg) | Created Date
 
 Notes:
-- Header names are used exactly by the script. If you change names, update `headerMap` usages or modify the code.
-- `Status` values used by the app: `Pending`, `Payment due`, `Paid`. `Paid` must be set manually by staff in the sheet.
+- The active deal is the last row in this sheet.
 
-## Deployment (Publish Web App)
-1. Open the script project (Extensions → Apps Script) for the spreadsheet or open the project in the Apps Script editor.
-2. In Apps Script, click **Deploy → New deployment → Web app**.
-3. Set **Who has access** (your organization or Anyone as needed) and **Execute as** your account.
-4. Click **Deploy** and open the provided URL to use the admin UI.
+### Payment History
+Headers:
+- Payment ID | Fisherman ID | Status | Accumulated Weight (kg) | Payload (RM) | Deal ID | Date
 
-Example minimal test (once deployed):
-```bash
-# open the web app URL in a browser and follow these steps from the UI
-```
+Status values written/used by the script:
+- `Pending`
+- `Payment Due`
+- `Paid`
 
-## Basic Usage / SOP (what the app automates)
+### Drop-off Log
+Headers:
+- Drop ID | Fisherman ID | Date | Net Weight (kg) | Purity | Inspector | Notes | Payment ID
 
-Scenario A — First-time fisherman
-- Register in the Quick Register panel (creates a `Person ID`).
-- Log drop: staff selects or pastes `Person ID`, enters weight and purity.
-- System creates a `Payment History` row with `Status = Pending` and accumulated weight equal to the drop.
+Notes:
+- The script ensures the `Payment ID` column exists in Drop-off Log (it adds it if missing).
+- For auditability, drop-off rows that “count toward” a payment are tagged with that payment’s `Payment ID`.
 
-Scenario B — Returning fisherman (below threshold)
-- Search and select fisherman.
-- Log drop: system appends the drop and adds its weight to the existing `Pending` payment's `Accumulated Weight (kg)`.
+## Deploy (publish as a Web App)
+1. Open the Google Spreadsheet.
+2. Go to Extensions → Apps Script.
+3. Deploy → New deployment → Web app.
+4. Configure:
+   - Execute as: you
+   - Who has access: choose based on your org’s needs
+5. Deploy and open the Web App URL.
 
-Scenario C — Threshold reached
-- When accumulated weight meets/exceeds the active deal threshold, the system:
-  - Allocates drops to reach the threshold and caps the paid weight to the threshold.
-  - Marks that payment row `Status` as `Payment due` (NOT `Paid`). Staff should review and mark `Paid` manually in the sheet.
-  - Creates a new `Pending` row for leftover weight (if any).
-  - Tags the contributing rows in `Drop-off Log` by setting their `Payment ID` for auditability.
+## How the app works (staff SOP)
 
-Important: `Paid` is intentionally not set programmatically — this prevents accidental payouts and gives staff a chance to verify.
+### 1) Find / Register fisherman
+- Use the Find Fisherman box (typeahead search by name or Person ID).
+- If no match, click Register to open a modal and create a new fisherman.
+- After registering, the UI selects the new fisherman and refreshes the typeahead cache.
 
-## Testing checklist
-- Ensure sheet headers exactly match names listed above.
-- Create a `Deals` row with a threshold and rates (this is the “active deal”).
+### 2) Admit fishnet (log a drop-off)
+- Select a fisherman first.
+- The Admit Fishnet panel shows:
+  - Fisherman summary (name/phone + ID/village)
+  - Fisherman ID (read-only)
+- Enter:
+  - Weight (kg)
+  - Purity (radio buttons: Clean / Partial / Unclean)
+  - Inspector name (optional)
+  - Notes (optional)
+- Click Submit to create a Drop-off Log row and trigger allocation.
+
+### 3) Automatic allocation & payment lifecycle
+When a drop-off is logged:
+- The script allocates untagged drop-offs into the current Pending payment until the deal threshold is met.
+- If the threshold is met/exceeded:
+  - the payment is finalized as `Payment Due`
+  - contributing drop-offs are tagged in Drop-off Log with the payment’s `Payment ID`
+  - any leftover (excess) weight is split into a new untagged drop row and a new Pending payment is created
+
+Payload:
+- The `Payload (RM)` is computed from tagged drop-offs using the active deal’s rates and rounded to 2 decimals.
+
+### 4) Due payments → confirm payout
+- The UI lists all `Payment Due` items with fisherman name/phone.
+- Clicking Confirm payment updates the Payment History row status to `Paid`.
+
+### 5) Payment explorer (paid payments + audit)
+- Shows `Paid` payments.
+- Month navigation (Prev/Next) filters the list to one month at a time.
+- Each paid payment has a View drop-offs button to show the exact tagged drop-offs.
+
+Date display:
+- Backend stores Dates as real sheet date values.
+- UI shows payment timestamps as `17 Nov 2025 17:35`.
+
+### 6) Volunteer contribution (monthly)
+- Month navigation (Prev/Next) with a month label.
+- Totals net weight by inspector for the selected month, including a breakdown by purity.
+
+## Implementation notes
+- Sheet headers are used by name; changing header text requires code updates.
+- The code is defensive against “table-style” sheets that create blank rows:
+  - Payment History rows without `Payment ID` are ignored.
+  - Payment status matching is normalized (whitespace / case).
+- Server date formatting uses the script timezone.
+
+## Backend functions (called from the UI)
+- `doGet()`
+- Fishermen: `getFishermen()`, `findFishermen(query)`, `registerFisherman({ fullName, phone, village })`
+- Deals: `getActiveDeal()`
+- Drop-offs: `logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes })`
+- Payments: `getDuePayments()` (also `getOpenPayments()` alias), `confirmPayment(paymentId)`, `getPaidPayments()`, `getDropoffsByPaymentId(paymentId)`
+- Volunteer contribution: `getVolunteerContributionMonth({ year, month })`
+
+## Quick troubleshooting
+- “No active deal configured”: add a row to Deals (threshold + rates).
+- Search/typeahead returns nothing: confirm Fishermen Registry headers match exactly.
+- Payments not appearing:
+  - confirm Payment History headers match exactly
+  - ensure rows have a non-empty Payment ID
+  - ensure Status is `Payment Due` or `Paid` (case/spacing variants are usually handled)
