@@ -75,6 +75,15 @@
       cursor: pointer
     }
 
+    .list-item.compact {
+      padding: 6px;
+      margin-top: 6px
+    }
+
+    .list-item.compact .small {
+      font-size: 12px
+    }
+
     .muted {
       color: var(--muted);
       font-size: 13px
@@ -117,6 +126,13 @@
       line-height: 1.1
     }
 
+    .topbar-subtitle {
+      margin-top: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      opacity: 0.95
+    }
+
     /* modal */
     .modal-backdrop {
       position: fixed;
@@ -124,7 +140,8 @@
       background: rgba(0, 0, 0, 0.35);
       display: none;
       align-items: center;
-      justify-content: center
+      justify-content: center;
+      z-index: 1000
     }
 
     .modal {
@@ -133,7 +150,8 @@
       border-radius: 10px;
       max-width: 480px;
       width: 90%;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12)
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      position: relative
     }
 
     .modal h4 {
@@ -342,7 +360,8 @@
 
 <body>
   <header class="topbar">
-    <div class="topbar-title">Fishnet Recycling Management – Pomen Laut Projects</div>
+    <div class="topbar-title">Fishnet Recycle Manager</div>
+    <div class="topbar-subtitle">by Pomen Laut Projects</div>
   </header>
 
   <div class="grid">
@@ -1149,12 +1168,11 @@
 
         rows.forEach(p => {
           const d = document.createElement('div');
-          d.className = 'list-item';
+          d.className = 'list-item compact';
           d.style.cursor = 'default';
 
           const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
           const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
-          const village = p.fishermanVillage ? (' — ' + escapeHtml(p.fishermanVillage)) : '';
           const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
           const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
 
@@ -1166,9 +1184,11 @@
             '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
             '</div>' +
             '</div>' +
-            '<div class="small muted">Village: ' + escapeHtml(p.fishermanVillage || '') + '</div>' +
-            '<div class="small muted">Payment: ' + escapeHtml(p.paymentId || '') + ' • Fisherman ID: ' + escapeHtml(p.fishermanId || '') + '</div>' +
-            '<div class="flex" style="margin-top:8px">' +
+            '<div class="small muted">' +
+            (p.fishermanVillage ? ('Village: ' + escapeHtml(p.fishermanVillage) + ' • ') : '') +
+            'Payment: ' + escapeHtml(p.paymentId || '') +
+            '</div>' +
+            '<div class="flex" style="margin-top:6px">' +
             '<button class="secondary" data-confirm-payment="' + escapeHtml(p.paymentId) + '">Confirm payment</button>' +
             '<div class="right muted small" data-confirm-result></div>' +
             '</div>';
