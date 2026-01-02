@@ -636,6 +636,17 @@
 
     function escapeHtml(s) { return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+    function normalizeSpaces(s) {
+      return (s || '').toString().replace(/[\s\u00A0]+/g, ' ').trim();
+    }
+
+    function titleCaseInput(s) {
+      const str = normalizeSpaces(s).toLowerCase();
+      if (!str) return '';
+      // Capitalize after start/space/hyphen/apostrophe.
+      return str.replace(/(^|[\s\-'])[a-z]/g, m => m.toUpperCase());
+    }
+
     function parseDMYDateTime(s) {
       // Accepts "DD/MM/YYYY HH:MM:SS" (or without time). Returns Date or null.
       const str = (s || '').toString().trim();
@@ -1032,9 +1043,9 @@
     }
 
     function registerFromModal() {
-      const fullName = document.getElementById('mRegName').value;
-      const phone = document.getElementById('mRegPhone').value;
-      const village = document.getElementById('mRegVillage').value;
+      const fullName = titleCaseInput(document.getElementById('mRegName').value);
+      const phone = normalizeSpaces(document.getElementById('mRegPhone').value);
+      const village = titleCaseInput(document.getElementById('mRegVillage').value);
       if (!fullName) return alert('Name required');
 
       const submit = document.getElementById('mRegSubmit');
@@ -1334,7 +1345,7 @@
       if (!fishermanId) return alert('Fisherman ID required');
       if (!netWeight || netWeight <= 0) return alert('Weight must be > 0');
       const purity = getSelectedDropPurity();
-      const inspector = (document.getElementById('dropInspector').value || '').toString().trim();
+      const inspector = titleCaseInput((document.getElementById('dropInspector').value || '').toString());
       if (!inspector) return alert('Inspector is required');
       const notes = document.getElementById('dropNotes').value;
 

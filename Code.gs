@@ -109,6 +109,9 @@ function _generateUniqueIdForSheet(prefixLetter, sheetName, idColumnName) {
 }
 
 function registerFisherman({ fullName, phone, village }) {
+    fullName = _titleCase(fullName);
+    village = _titleCase(village);
+    phone = _normalizeSpaces(phone);
     const sheet = getSheet(SHEET_NAMES.FISHERMEN);
     const headers = headerMap(sheet);
     const id = _generateUniqueIdForSheet('F', SHEET_NAMES.FISHERMEN, 'Person ID');
@@ -634,7 +637,14 @@ function allocateToAccumulating(fishermanId) {
 
 function logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes }) {
     if (!fishermanId) throw new Error('fishermanId required');
-    const drop = { fishermanId, netWeight: parseFloat(netWeight), purity, inspector, notes, paymentId: '' };
+    const drop = {
+        fishermanId,
+        netWeight: parseFloat(netWeight),
+        purity,
+        inspector: _titleCase(inspector),
+        notes,
+        paymentId: ''
+    };
     const added = appendDrop(drop);
     // try to allocate to accumulating and possibly trigger payout
     const res = allocateToAccumulating(fishermanId);
@@ -655,6 +665,17 @@ function _normalizeStatus(s) {
         .replace(/[\s\u00A0]+/g, ' ')
         .trim()
         .toLowerCase();
+}
+
+function _normalizeSpaces(s) {
+    return (s || '').toString().replace(/[\s\u00A0]+/g, ' ').trim();
+}
+
+function _titleCase(s) {
+    const str = _normalizeSpaces(s).toLowerCase();
+    if (!str) return '';
+    // Capitalize after start/space/hyphen/apostrophe.
+    return str.replace(/(^|[\s\-'])[a-z]/g, m => m.toUpperCase());
 }
 
 function _formatDateTime(v) {
@@ -952,7 +973,7 @@ function updateDropoffById({ dropId, netWeightKg, purity, inspector, notes } = {
         if (['Clean', 'Partial', 'Unclean'].indexOf(p) === -1) throw new Error('Invalid purity');
         updates['Purity'] = p;
     }
-    if (inspector != null) updates['Inspector'] = (inspector || '').toString();
+    if (inspector != null) updates['Inspector'] = _titleCase(inspector);
     if (notes != null) updates['Notes'] = (notes || '').toString();
 
     updateDropRow(found.rowIndex, updates);
