@@ -759,3 +759,221 @@ function getVolunteerContributionMonth({ year, month } = {}) {
         items
     };
 }
+
+function _getPaymentRowIndexById(paymentId) {
+    if (!paymentId) return null;
+    const sheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+    const pidCol = headers['Payment ID'];
+    if (!pidCol) return null;
+    for (let i = 0; i < rows.length; i++) {
+        const rowPid = (rows[i][pidCol - 1] || '').toString();
+        if (rowPid && rowPid === (paymentId + '')) return 2 + i;
+    }
+    return null;
+}
+
+function _getPaymentStatusById(paymentId) {
+    if (!paymentId) return '';
+    const sheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+    const pidCol = headers['Payment ID'];
+    const statusCol = headers['Status'];
+    if (!pidCol || !statusCol) return '';
+    for (let i = 0; i < rows.length; i++) {
+        const rowPid = (rows[i][pidCol - 1] || '').toString();
+        if (rowPid !== (paymentId + '')) continue;
+        return (rows[i][statusCol - 1] || '').toString();
+    }
+    return '';
+}
+
+function _isPaidPaymentId(paymentId) {
+    const status = _normalizeStatus(_getPaymentStatusById(paymentId));
+    return status === 'paid';
+}
+
+function _findDropRowById(dropId) {
+    if (!dropId) return null;
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
+    const sheet = getSheet(SHEET_NAMES.DROPS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+    const idCol = headers['Drop ID'];
+    if (!idCol) throw new Error('Drop-off Log headers missing Drop ID');
+    for (let i = 0; i < rows.length; i++) {
+        const rowDid = (rows[i][idCol - 1] || '').toString();
+        if (rowDid && rowDid === (dropId + '')) {
+            return {
+                rowIndex: 2 + i,
+                values: rows[i],
+                headers
+            };
+        }
+    }
+    return null;
+}
+
+function getEditableDropoffsByFishermanId(fishermanId) {
+    if (!fishermanId) throw new Error('fishermanId required');
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
+    const sheet = getSheet(SHEET_NAMES.DROPS);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+
+    const results = [];
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const fid = (r[headers['Fisherman ID'] - 1] || '').toString();
+        if (fid !== (fishermanId + '')) continue;
+
+        const paymentId = (headers['Payment ID'] ? (r[headers['Payment ID'] - 1] || '').toString() : '');
+        if (paymentId && _isPaidPaymentId(paymentId)) {
+            // Do not show drop-offs that contributed to paid payments.
+            continue;
+        }
+
+        results.push({
+            dropId: (r[headers['Drop ID'] - 1] || '').toString(),
+            fishermanId: fid,
+            date: _formatDateTime(r[headers['Date'] - 1]),
+            netWeightKg: parseFloat(r[headers['Net Weight (kg)'] - 1]) || 0,
+            purity: (r[headers['Purity'] - 1] || '').toString(),
+            inspector: (r[headers['Inspector'] - 1] || '').toString(),
+            notes: (r[headers['Notes'] - 1] || '').toString(),
+            paymentId: paymentId,
+            paymentStatus: paymentId ? _getPaymentStatusById(paymentId) : ''
+        });
+    }
+
+    results.sort((a, b) => {
+        const da = _coerceToDate(a.date);
+        const db = _coerceToDate(b.date);
+        const ta = da ? da.getTime() : 0;
+        const tb = db ? db.getTime() : 0;
+        return tb - ta;
+    });
+
+    return JSON.parse(JSON.stringify(results));
+}
+
+function reevaluatePaymentsForFisherman(fishermanId) {
+    if (!fishermanId) throw new Error('fishermanId required');
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
+
+    const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const pHeaders = headerMap(paymentsSheet);
+    const paymentRows = getDataRows(paymentsSheet);
+
+    const openPaymentIds = new Set();
+    const paidPaymentIds = new Set();
+
+    for (let i = 0; i < paymentRows.length; i++) {
+        const r = paymentRows[i];
+        const pid = (r[pHeaders['Payment ID'] - 1] || '').toString().trim();
+        if (!pid) continue;
+        const fid = (r[pHeaders['Fisherman ID'] - 1] || '').toString();
+        if (fid !== (fishermanId + '')) continue;
+        const statusNorm = _normalizeStatus(r[pHeaders['Status'] - 1]);
+        if (statusNorm === 'paid') paidPaymentIds.add(pid);
+        else openPaymentIds.add(pid);
+    }
+
+    // 1) Untag all drops that were part of NON-paid payments (due/accumulating), so we can reallocate.
+    const dropsSheet = getSheet(SHEET_NAMES.DROPS);
+    const dHeaders = headerMap(dropsSheet);
+    const dropRows = getDataRows(dropsSheet);
+    const clearedDropIds = [];
+
+    for (let i = 0; i < dropRows.length; i++) {
+        const r = dropRows[i];
+        const fid = (r[dHeaders['Fisherman ID'] - 1] || '').toString();
+        if (fid !== (fishermanId + '')) continue;
+        const pid = (r[dHeaders['Payment ID'] - 1] || '').toString().trim();
+        if (!pid) continue;
+        if (paidPaymentIds.has(pid)) continue;
+        if (!openPaymentIds.has(pid)) continue;
+
+        const rowIndex = 2 + i;
+        updateDropRow(rowIndex, { 'Payment ID': '' });
+        clearedDropIds.push((r[dHeaders['Drop ID'] - 1] || '').toString());
+    }
+
+    // 2) Delete all NON-paid payments for this fisherman (bottom-up).
+    const deletedPaymentIds = [];
+    for (let i = paymentRows.length - 1; i >= 0; i--) {
+        const r = paymentRows[i];
+        const pid = (r[pHeaders['Payment ID'] - 1] || '').toString().trim();
+        if (!pid) continue;
+        const fid = (r[pHeaders['Fisherman ID'] - 1] || '').toString();
+        if (fid !== (fishermanId + '')) continue;
+        const statusNorm = _normalizeStatus(r[pHeaders['Status'] - 1]);
+        if (statusNorm === 'paid') continue;
+        const rowIndex = 2 + i;
+        paymentsSheet.deleteRow(rowIndex);
+        deletedPaymentIds.push(pid);
+    }
+
+    // 3) Allocate again from scratch for remaining untagged drops.
+    const allocationResult = allocateToAccumulating(fishermanId);
+
+    return {
+        ok: true,
+        fishermanId: (fishermanId + ''),
+        clearedDropIds,
+        deletedPaymentIds,
+        allocationResult
+    };
+}
+
+function updateDropoffById({ dropId, netWeightKg, purity, inspector, notes } = {}) {
+    if (!dropId) throw new Error('dropId required');
+    const found = _findDropRowById(dropId);
+    if (!found) throw new Error('Drop not found: ' + dropId);
+
+    const headers = found.headers;
+    const paymentId = headers['Payment ID'] ? (found.values[headers['Payment ID'] - 1] || '').toString().trim() : '';
+    if (paymentId && _isPaidPaymentId(paymentId)) {
+        throw new Error('Cannot edit a drop-off that contributed to a paid payment.');
+    }
+
+    const fishermanId = (found.values[headers['Fisherman ID'] - 1] || '').toString();
+    const updates = {};
+
+    if (netWeightKg != null) {
+        const n = parseFloat(netWeightKg);
+        if (!isFinite(n) || n <= 0) throw new Error('Net Weight (kg) must be > 0');
+        updates['Net Weight (kg)'] = n;
+    }
+    if (purity != null) {
+        const p = (purity || '').toString().trim();
+        if (['Clean', 'Partial', 'Unclean'].indexOf(p) === -1) throw new Error('Invalid purity');
+        updates['Purity'] = p;
+    }
+    if (inspector != null) updates['Inspector'] = (inspector || '').toString();
+    if (notes != null) updates['Notes'] = (notes || '').toString();
+
+    updateDropRow(found.rowIndex, updates);
+    const reeval = reevaluatePaymentsForFisherman(fishermanId);
+    return { ok: true, dropId: (dropId + ''), fishermanId, reeval };
+}
+
+function deleteDropoffById({ dropId } = {}) {
+    if (!dropId) throw new Error('dropId required');
+    const found = _findDropRowById(dropId);
+    if (!found) throw new Error('Drop not found: ' + dropId);
+
+    const headers = found.headers;
+    const paymentId = headers['Payment ID'] ? (found.values[headers['Payment ID'] - 1] || '').toString().trim() : '';
+    if (paymentId && _isPaidPaymentId(paymentId)) {
+        throw new Error('Cannot delete a drop-off that contributed to a paid payment.');
+    }
+
+    const fishermanId = (found.values[headers['Fisherman ID'] - 1] || '').toString();
+    const sheet = getSheet(SHEET_NAMES.DROPS);
+    sheet.deleteRow(found.rowIndex);
+    const reeval = reevaluatePaymentsForFisherman(fishermanId);
+    return { ok: true, dropId: (dropId + ''), fishermanId, reeval };
+}

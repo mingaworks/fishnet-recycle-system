@@ -212,6 +212,39 @@
       display: none
     }
 
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px
+    }
+
+    .tab-btn {
+      background: #f1f3f5;
+      color: #111;
+      border: 1px solid #ddd;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer
+    }
+
+    .tab-btn.active {
+      background: #f97316;
+      color: #fff;
+      border-color: #f97316
+    }
+
+    .inline-input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ddd
+    }
+
     .submit-btn {
       background: #f97316;
       font-weight: 700
@@ -245,6 +278,65 @@
     .typeahead-empty {
       padding: 10px 12px
     }
+
+    /* manage drop-offs table */
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid #e6e6e6;
+      border-radius: 8px;
+      background: #fff
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th,
+    td {
+      padding: 10px 10px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+      font-size: 13px
+    }
+
+    th {
+      text-align: left;
+      font-size: 12px;
+      color: #444;
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+      z-index: 1
+    }
+
+    td.actions,
+    th.actions {
+      width: 140px;
+      text-align: right;
+      white-space: nowrap
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      font-size: 13px
+    }
+
+    .danger {
+      background: #dc2626;
+      color: #fff;
+      border: none
+    }
+
+    .danger[disabled] {
+      opacity: 1;
+      background: #ef4444;
+      cursor: default
+    }
+
+    .cell-muted {
+      color: var(--muted)
+    }
   </style>
 </head>
 
@@ -256,53 +348,62 @@
   <div class="grid">
     <div>
       <div class="card">
-        <strong>Find Fisherman</strong>
         <div class="flex" style="margin-top:8px">
           <div class="typeahead" style="flex:1">
-            <input id="searchQ" placeholder="Name or Person ID" style="width:100%" autocomplete="off" />
+            <input id="searchQ" placeholder="Search by Name or Fisherman ID" style="width:100%" autocomplete="off" />
             <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
           </div>
-          <button class="secondary" onclick="search()">Search</button>
           <button
-            onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">Register</button>
+            onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">New Fisherman</button>
         </div>
         <div id="searchResults" style="margin-top:10px"></div>
       </div>
 
       <div class="card hidden" id="admitCard">
-        <strong>Admit Fishnet</strong>
+        <div class="tabs">
+          <button id="tabAdmit" class="tab-btn active" onclick="setAdmitTab('admit')">Admit Fishnet</button>
+          <button id="tabManage" class="tab-btn" onclick="setAdmitTab('manage')">Manage Drop-offs</button>
+        </div>
 
-        <div class="form">
-          <div class="form-grid">
-            <div class="field-name"><b>Fisherman</b></div>
-            <div class="field-value"><b id="dropFishermanName" class="muted">None selected</b></div>
+        <div id="admitTabAdmit">
+          <div class="form">
+            <div class="form-grid">
+              <div class="field-name"><b>Fisherman</b></div>
+              <div class="field-value"><b id="dropFishermanName" class="muted">None selected</b></div>
 
-            <div class="field-name"><b>Fisherman ID</b></div>
-            <div class="field-value"><span id="dropFishermanIdText" class="muted">—</span></div>
+              <div class="field-name"><b>Fisherman ID</b></div>
+              <div class="field-value"><span id="dropFishermanIdText" class="muted">—</span></div>
 
-            <div class="field-name">Accumulated fishnet</div>
-            <div class="field-value"><span id="dropAccumulatingWeight" class="muted">—</span></div>
+              <div class="field-name">Next payment after</div>
+              <div class="field-value"><span id="dropAccumulatingWeight" class="muted">—</span></div>
 
-            <div class="field-name">Weight (kg)</div>
-            <input id="dropWeight" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 12" />
+              <div class="field-name">Weight (kg)</div>
+              <input id="dropWeight" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 12" />
 
-            <div class="field-name">Purity</div>
-            <div id="dropPurityGroup" class="radio-group">
-              <label class="radio-option"><input type="radio" name="dropPurity" value="Clean" checked /> Clean</label>
-              <label class="radio-option"><input type="radio" name="dropPurity" value="Partial" /> Partial</label>
-              <label class="radio-option"><input type="radio" name="dropPurity" value="Unclean" /> Unclean</label>
+              <div class="field-name">Purity</div>
+              <div id="dropPurityGroup" class="radio-group">
+                <label class="radio-option"><input type="radio" name="dropPurity" value="Clean" checked /> Clean</label>
+                <label class="radio-option"><input type="radio" name="dropPurity" value="Partial" /> Partial</label>
+                <label class="radio-option"><input type="radio" name="dropPurity" value="Unclean" /> Unclean</label>
+              </div>
+
+              <div class="field-name">Inspector</div>
+              <input id="dropInspector" placeholder="Inspector name" />
+
+              <div class="field-name">Notes</div>
+              <input id="dropNotes" placeholder="Optional notes" />
             </div>
-
-            <div class="field-name">Inspector</div>
-            <input id="dropInspector" placeholder="Inspector name" />
-
-            <div class="field-name">Notes</div>
-            <input id="dropNotes" placeholder="Optional notes" />
+          </div>
+          <div class="flex" style="margin-top:10px">
+            <button id="dropSubmitBtn" class="submit-btn" onclick="logDrop()">Submit</button>
+            <button class="secondary" onclick="clearDropForm()">Clear</button>
           </div>
         </div>
-        <div class="flex" style="margin-top:10px">
-          <button id="dropSubmitBtn" class="submit-btn" onclick="logDrop()">Submit</button>
-          <button class="secondary" onclick="clearDropForm()">Clear</button>
+
+        <div id="admitTabManage" class="hidden">
+          <div class="muted small" style="margin-top:10px">Shows drop-offs that are not part of <b>Paid</b> payments.</div>
+          <div id="manageDropsInfo" class="muted small" style="margin-top:6px"></div>
+          <div id="manageDropsList" style="margin-top:10px"></div>
         </div>
       </div>
     </div>
@@ -388,10 +489,31 @@
     let fishermenLoaded = false;
     let typeaheadHideTimer = null;
 
+    let activeDealCache = null;
+
+    let admitActiveTab = 'admit';
+
     function setAdmitVisible(isVisible) {
       const card = document.getElementById('admitCard');
       if (!card) return;
       card.classList.toggle('hidden', !isVisible);
+    }
+
+    function setAdmitTab(tab) {
+      admitActiveTab = (tab === 'manage') ? 'manage' : 'admit';
+      const tabAdmit = document.getElementById('tabAdmit');
+      const tabManage = document.getElementById('tabManage');
+      const panelAdmit = document.getElementById('admitTabAdmit');
+      const panelManage = document.getElementById('admitTabManage');
+
+      if (tabAdmit) tabAdmit.classList.toggle('active', admitActiveTab === 'admit');
+      if (tabManage) tabManage.classList.toggle('active', admitActiveTab === 'manage');
+      if (panelAdmit) panelAdmit.classList.toggle('hidden', admitActiveTab !== 'admit');
+      if (panelManage) panelManage.classList.toggle('hidden', admitActiveTab !== 'manage');
+
+      if (admitActiveTab === 'manage') {
+        loadManageDropoffs();
+      }
     }
 
     function onSuccessAsync(handler) {
@@ -403,6 +525,7 @@
     function loadActiveDeal() {
       onSuccessAsync(deal => {
         const el = document.getElementById('activeDeal');
+        activeDealCache = deal || null;
         if (!deal) { el.innerHTML = '<div class="notice">No active deal configured.</div>'; return; }
         el.innerHTML = '<div class="small"><b>Threshold:</b> ' + deal.data.thresholdKg + ' kg</div>' +
           '<div class="small"><b>Rates (RM/kg):</b> Clean ' + deal.data.rateClean + ', Partial ' + deal.data.ratePartial + ', Unclean ' + deal.data.rateUnclean + '</div>';
@@ -590,7 +713,15 @@
         google.script.run
           .withSuccessHandler(res => {
             const kg = res && typeof res.accumulatingKg !== 'undefined' ? res.accumulatingKg : 0;
-            if (accumulatingEl) accumulatingEl.innerText = (kg || 0) + ' kg';
+            if (accumulatingEl) {
+              const threshold = activeDealCache && activeDealCache.data ? (parseFloat(activeDealCache.data.thresholdKg) || 0) : 0;
+              if (!threshold) {
+                accumulatingEl.innerText = '—';
+              } else {
+                const remaining = Math.max(0, (threshold || 0) - (parseFloat(kg) || 0));
+                accumulatingEl.innerText = formatKg(remaining) + ' kg';
+              }
+            }
           })
           .withFailureHandler(err => {
             if (accumulatingEl) accumulatingEl.innerText = '—';
@@ -600,6 +731,270 @@
       }
 
       setAdmitVisible(!!selectedFishermanId);
+
+      // Keep manage tab list in sync when switching fishermen.
+      if (selectedFishermanId) {
+        loadManageDropoffs();
+      } else {
+        try {
+          document.getElementById('manageDropsInfo').innerText = '';
+          document.getElementById('manageDropsList').innerHTML = '';
+        } catch (e) { }
+      }
+    }
+
+    function loadManageDropoffs() {
+      const fishermanId = (selectedFishermanId || '').toString().trim();
+      const info = document.getElementById('manageDropsInfo');
+      const list = document.getElementById('manageDropsList');
+      if (!info || !list) return;
+
+      if (!fishermanId) {
+        info.innerText = 'Select a fisherman first.';
+        list.innerHTML = '';
+        return;
+      }
+
+      info.innerText = 'Loading...';
+      list.innerHTML = '';
+
+      google.script.run
+        .withSuccessHandler(rows => {
+          list.innerHTML = '';
+          if (!rows || rows.length === 0) {
+            info.innerText = 'No editable drop-offs found.';
+            return;
+          }
+          info.innerText = '';
+
+          const wrap = document.createElement('div');
+          wrap.className = 'table-wrap';
+          const table = document.createElement('table');
+          table.innerHTML =
+            '<thead>' +
+            '<tr>' +
+            '<th>Drop ID</th>' +
+            '<th>Date</th>' +
+            '<th>Weight (kg)</th>' +
+            '<th>Purity</th>' +
+            '<th>Inspector</th>' +
+            '<th>Notes</th>' +
+            '<th class="actions">Actions</th>' +
+            '</tr>' +
+            '</thead>' +
+            '<tbody></tbody>';
+
+          const tbody = table.querySelector('tbody');
+
+          function mkTd(text, className) {
+            const td = document.createElement('td');
+            if (className) td.className = className;
+            td.textContent = text || '';
+            return td;
+          }
+
+          function refreshRowFromData(tr, d) {
+            const cells = tr.querySelectorAll('td');
+            if (cells.length < 7) return;
+            cells[0].textContent = (d.dropId || '');
+            cells[1].textContent = (d.date || '');
+            cells[2].textContent = formatKg(d.netWeightKg || 0);
+            cells[3].textContent = (d.purity || '');
+            cells[4].textContent = (d.inspector || '');
+            cells[5].textContent = (d.notes || '');
+          }
+
+          rows.forEach(d => {
+            const tr = document.createElement('tr');
+            tr.appendChild(mkTd(d.dropId || ''));
+            tr.appendChild(mkTd(d.date || '', 'cell-muted'));
+            tr.appendChild(mkTd(formatKg(d.netWeightKg || 0)));
+            tr.appendChild(mkTd(d.purity || ''));
+            tr.appendChild(mkTd(d.inspector || ''));
+            tr.appendChild(mkTd(d.notes || ''));
+
+            const tdActions = document.createElement('td');
+            tdActions.className = 'actions';
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'secondary action-btn';
+            btnEdit.textContent = 'Edit';
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'danger action-btn';
+            btnDelete.style.marginLeft = '6px';
+            btnDelete.textContent = 'Delete';
+            const statusEl = document.createElement('div');
+            statusEl.className = 'muted small';
+            statusEl.style.marginTop = '6px';
+            tdActions.appendChild(btnEdit);
+            tdActions.appendChild(btnDelete);
+            tdActions.appendChild(statusEl);
+            tr.appendChild(tdActions);
+
+            let isEditing = false;
+            let original = null;
+
+            function enterEdit() {
+              if (isEditing) return;
+              isEditing = true;
+              statusEl.textContent = '';
+              btnEdit.textContent = 'Cancel';
+
+              original = {
+                netWeightKg: d.netWeightKg,
+                purity: d.purity,
+                inspector: d.inspector,
+                notes: d.notes
+              };
+
+              const weightTd = tr.children[2];
+              const purityTd = tr.children[3];
+              const inspectorTd = tr.children[4];
+              const notesTd = tr.children[5];
+
+              weightTd.innerHTML = '';
+              purityTd.innerHTML = '';
+              inspectorTd.innerHTML = '';
+              notesTd.innerHTML = '';
+
+              const w = document.createElement('input');
+              w.className = 'inline-input';
+              w.inputMode = 'numeric';
+              w.pattern = '[0-9]*';
+              w.value = String(Math.round((parseFloat(d.netWeightKg) || 0))).replace(/\D+/g, '');
+              w.addEventListener('input', () => {
+                const v = (w.value || '').toString();
+                const cleaned = v.replace(/\D+/g, '');
+                if (v !== cleaned) w.value = cleaned;
+              });
+
+              const p = document.createElement('select');
+              p.className = 'inline-input';
+              ['Clean', 'Partial', 'Unclean'].forEach(optVal => {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = optVal;
+                p.appendChild(opt);
+              });
+              p.value = (d.purity || 'Clean');
+
+              const i = document.createElement('input');
+              i.className = 'inline-input';
+              i.value = (d.inspector || '').toString();
+
+              const n = document.createElement('input');
+              n.className = 'inline-input';
+              n.value = (d.notes || '').toString();
+
+              weightTd.appendChild(w);
+              purityTd.appendChild(p);
+              inspectorTd.appendChild(i);
+              notesTd.appendChild(n);
+
+              const saveBtn = document.createElement('button');
+              saveBtn.className = 'submit-btn action-btn';
+              saveBtn.style.marginLeft = '6px';
+              saveBtn.textContent = 'Save';
+              tdActions.insertBefore(saveBtn, statusEl);
+
+              saveBtn.onclick = () => {
+                saveBtn.disabled = true;
+                btnDelete.disabled = true;
+                statusEl.textContent = 'Saving…';
+
+                const payload = {
+                  dropId: d.dropId,
+                  netWeightKg: (w && w.value) ? w.value : '',
+                  purity: (p && p.value) ? p.value : 'Clean',
+                  inspector: (i && i.value) ? i.value : '',
+                  notes: (n && n.value) ? n.value : ''
+                };
+
+                google.script.run
+                  .withSuccessHandler(() => {
+                    // local update for immediate UI, server will fully reallocate anyway
+                    d.netWeightKg = parseFloat(payload.netWeightKg) || d.netWeightKg;
+                    d.purity = payload.purity;
+                    d.inspector = payload.inspector;
+                    d.notes = payload.notes;
+                    statusEl.textContent = 'Saved.';
+                    exitEdit(true);
+                    refreshAfterDropMutation();
+                  })
+                  .withFailureHandler(err => {
+                    saveBtn.disabled = false;
+                    btnDelete.disabled = false;
+                    statusEl.textContent = 'Error: ' + (err && err.message ? err.message : err);
+                  })
+                  .updateDropoffById(payload);
+              };
+
+              tr._saveBtn = saveBtn;
+            }
+
+            function exitEdit(revert) {
+              if (!isEditing) return;
+              isEditing = false;
+              btnEdit.textContent = 'Edit';
+              btnDelete.disabled = false;
+              if (tr._saveBtn) {
+                try { tr._saveBtn.remove(); } catch (e) { }
+                tr._saveBtn = null;
+              }
+              if (revert && original) {
+                d.netWeightKg = original.netWeightKg;
+                d.purity = original.purity;
+                d.inspector = original.inspector;
+                d.notes = original.notes;
+              }
+              refreshRowFromData(tr, d);
+            }
+
+            btnEdit.onclick = () => {
+              if (isEditing) {
+                exitEdit(true);
+              } else {
+                enterEdit();
+              }
+            };
+
+            btnDelete.onclick = () => {
+              if (!confirm('Delete drop-off ' + (d.dropId || '') + '? This will recalculate due/accumulating payments.')) return;
+              btnDelete.disabled = true;
+              btnEdit.disabled = true;
+              statusEl.textContent = '';
+              google.script.run
+                .withSuccessHandler(() => {
+                  statusEl.textContent = 'Deleted.';
+                  refreshAfterDropMutation();
+                })
+                .withFailureHandler(err => {
+                  btnDelete.disabled = false;
+                  btnEdit.disabled = false;
+                  alert('Error: ' + (err.message || err));
+                })
+                .deleteDropoffById({ dropId: d.dropId });
+            };
+
+            tbody.appendChild(tr);
+          });
+
+          wrap.appendChild(table);
+          list.appendChild(wrap);
+        })
+        .withFailureHandler(err => {
+          info.innerText = '';
+          list.innerHTML = '';
+          alert('Error: ' + (err.message || err));
+        })
+        .getEditableDropoffsByFishermanId(fishermanId);
+    }
+
+    function refreshAfterDropMutation() {
+      // Reevaluation happens server-side; refresh all dependent UI.
+      loadPaymentExplorer();
+      loadVolunteerContribution();
+      try { selectFisherman(lastSelectedFisherman || { personId: selectedFishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
+      loadManageDropoffs();
     }
 
     function attachDropWeightDigitsOnly() {
@@ -992,6 +1387,11 @@
       const clean = document.querySelector('input[name="dropPurity"][value="Clean"]');
       if (clean) clean.checked = true;
       setAdmitVisible(false);
+
+      try {
+        document.getElementById('manageDropsInfo').innerText = '';
+        document.getElementById('manageDropsList').innerHTML = '';
+      } catch (e) { }
     }
 
     function loadVolunteerContribution() {
@@ -1052,6 +1452,7 @@
     loadVolunteerContribution();
     loadPaymentExplorer();
     setAdmitVisible(false);
+    setAdmitTab('admit');
   </script>
 </body>
 
