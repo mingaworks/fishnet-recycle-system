@@ -316,6 +316,7 @@ function confirmPayment(paymentId) {
 
     const pidCol = headers['Payment ID'];
     const statusCol = headers['Status'];
+    const dateCol = headers['Date'];
     if (!pidCol || !statusCol) throw new Error('Payment History headers missing Payment ID/Status');
 
     for (let i = 0; i < rows.length; i++) {
@@ -330,6 +331,7 @@ function confirmPayment(paymentId) {
         if (!isDue) throw new Error('Payment is not due: ' + statusRaw);
 
         existing[statusCol - 1] = 'Paid';
+        if (dateCol) existing[dateCol - 1] = new Date();
         sheet.getRange(rowIndex, 1, 1, existing.length).setValues([existing]);
         return { ok: true, paymentId };
     }

@@ -373,7 +373,8 @@
         </div>
 
         <div style="margin-top:10px">
-          <button onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">Register Fisherman</button>
+          <button onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">Register
+            Fisherman</button>
         </div>
         <div id="searchResults" style="margin-top:10px"></div>
       </div>
@@ -420,7 +421,8 @@
         </div>
 
         <div id="admitTabManage" class="hidden">
-          <div class="muted small" style="margin-top:10px">Shows drop-offs that are not part of <b>Paid</b> payments.</div>
+          <div class="muted small" style="margin-top:10px">Shows drop-offs that are not part of <b>Paid</b> payments.
+          </div>
           <div id="manageDropsInfo" class="muted small" style="margin-top:6px"></div>
           <div id="manageDropsList" style="margin-top:10px"></div>
         </div>
@@ -497,9 +499,38 @@
     </div>
   </div>
 
+  <!-- payment confirmation modal (irreversible) -->
+  <div id="paymentModalBackdrop" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h4>Confirm Payment</h4>
+      <div class="notice" style="margin-top:10px">This marks the payment as <b>Paid</b> and cannot be undone.</div>
+      <div class="form">
+        <div class="form-grid">
+          <div class="field-name">Fisherman</div>
+          <div class="field-value"><b id="mPayFisherman">—</b></div>
+
+          <div class="field-name">Total weight</div>
+          <div class="field-value"><b id="mPayWeight">—</b></div>
+
+          <div class="field-name">Payment amount</div>
+          <div class="field-value"><b id="mPayAmount">—</b></div>
+
+          <div class="field-name">Payment ID</div>
+          <div class="field-value"><span id="mPayId" class="muted">—</span></div>
+        </div>
+      </div>
+      <div style="margin-top:10px" class="flex">
+        <button id="mPayConfirm" class="danger" onclick="confirmPaymentFromModal()">Confirm payment</button>
+        <button id="mPayCancel" class="secondary" onclick="closePaymentModal()">Cancel</button>
+        <div id="mPayResult" class="muted small right"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     let lastSelectedFisherman = null;
     let modalCloseTimer = null;
+    let pendingPaymentConfirm = null;
     let volMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     let paidMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     let selectedFishermanId = '';
@@ -1061,6 +1092,64 @@
       document.getElementById('mRegResult').innerText = '';
     }
 
+    function openPaymentModal(p) {
+      pendingPaymentConfirm = p || null;
+      document.getElementById('mPayResult').innerText = '';
+      document.getElementById('mPayId').innerText = (p && p.paymentId) ? p.paymentId : '—';
+      document.getElementById('mPayFisherman').innerText = (p && p.fishermanName) ? p.fishermanName : '(Unknown)';
+      document.getElementById('mPayWeight').innerText = (p && typeof p.accumulatedKg !== 'undefined') ? (formatKg(p.accumulatedKg) + ' kg') : '—';
+      const amountText = (p && p.payloadRM !== '' && p.payloadRM != null) ? (p.payloadRM + ' RM') : '—';
+      document.getElementById('mPayAmount').innerText = amountText;
+
+      const confirmBtn = document.getElementById('mPayConfirm');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm payment';
+      }
+
+      const cancelBtn = document.getElementById('mPayCancel');
+      if (cancelBtn) {
+        cancelBtn.style.display = '';
+        cancelBtn.disabled = false;
+      }
+      document.getElementById('paymentModalBackdrop').style.display = 'flex';
+    }
+
+    function closePaymentModal() {
+      pendingPaymentConfirm = null;
+      document.getElementById('paymentModalBackdrop').style.display = 'none';
+      document.getElementById('mPayResult').innerText = '';
+    }
+
+    function confirmPaymentFromModal() {
+      if (!pendingPaymentConfirm || !pendingPaymentConfirm.paymentId) return alert('Payment ID missing');
+      const confirmBtn = document.getElementById('mPayConfirm');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Confirming…';
+      }
+
+      const cancelBtn = document.getElementById('mPayCancel');
+      if (cancelBtn) cancelBtn.style.display = 'none';
+      document.getElementById('mPayResult').innerText = '';
+
+      google.script.run
+        .withSuccessHandler(() => {
+          document.getElementById('mPayResult').innerText = 'Paid.';
+          closePaymentModal();
+          loadPaymentExplorer();
+        })
+        .withFailureHandler(err => {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirm payment';
+          }
+          if (cancelBtn) cancelBtn.style.display = '';
+          document.getElementById('mPayResult').innerText = 'Error: ' + (err && err.message ? err.message : err);
+        })
+        .confirmPayment(pendingPaymentConfirm.paymentId);
+    }
+
     function registerFromModal() {
       const fullName = titleCaseInput(document.getElementById('mRegName').value);
       const phone = normalizeSpaces(document.getElementById('mRegPhone').value);
@@ -1189,27 +1278,15 @@
             'Payment: ' + escapeHtml(p.paymentId || '') +
             '</div>' +
             '<div class="flex" style="margin-top:6px">' +
-            '<button class="secondary" data-confirm-payment="' + escapeHtml(p.paymentId) + '">Confirm payment</button>' +
+            '<button class="danger" data-confirm-payment="' + escapeHtml(p.paymentId) + '">Confirm payment</button>' +
             '<div class="right muted small" data-confirm-result></div>' +
             '</div>';
 
           const confirmBtn = d.querySelector('button[data-confirm-payment]');
           const confirmResult = d.querySelector('[data-confirm-result]');
           confirmBtn.onclick = () => {
-            confirmBtn.disabled = true;
-            const prev = confirmBtn.textContent;
-            confirmBtn.textContent = 'Confirming…';
-            google.script.run
-              .withSuccessHandler(() => {
-                confirmResult.innerText = 'Paid.';
-                loadPaymentExplorer();
-              })
-              .withFailureHandler(err => {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = prev;
-                alert('Error: ' + (err.message || err));
-              })
-              .confirmPayment(p.paymentId);
+            // Require explicit confirmation in modal (restates key financial details)
+            openPaymentModal(p);
           };
 
           list.appendChild(d);
