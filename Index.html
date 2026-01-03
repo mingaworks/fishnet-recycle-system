@@ -367,13 +367,13 @@
   <div class="grid">
     <div>
       <div class="card">
-        <div class="flex" style="margin-top:8px">
-          <div class="typeahead" style="flex:1">
-            <input id="searchQ" placeholder="Search by Name or Fisherman ID" style="width:100%" autocomplete="off" />
-            <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
-          </div>
-          <button
-            onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">New Fisherman</button>
+        <div class="typeahead" style="margin-top:8px">
+          <input id="searchQ" placeholder="Search Fisherman by Name or ID" style="width:100%" autocomplete="off" />
+          <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
+        </div>
+
+        <div style="margin-top:10px">
+          <button onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">Register Fisherman</button>
         </div>
         <div id="searchResults" style="margin-top:10px"></div>
       </div>
@@ -579,7 +579,7 @@
       if (!list || list.length === 0) {
         const wrapper = document.createElement('div');
         wrapper.className = 'muted';
-        wrapper.innerHTML = '<div>No matches.</div><div class="small" style="margin-top:6px">Use <b>Register</b> to add a new fisherman.</div>';
+        wrapper.innerHTML = '<div>No matches.</div><div class="small" style="margin-top:6px">Use <b>Register Fisherman</b> to create a new record.</div>';
         container.appendChild(wrapper);
         return;
       }
@@ -632,7 +632,7 @@
       if (!list || list.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'typeahead-empty muted small';
-        empty.innerHTML = 'No matches. Use <b>Register</b> to add a new fisherman.';
+        empty.innerHTML = 'No matches. Use <b>Register Fisherman</b> to create a new record.';
         panel.appendChild(empty);
         return;
       }
