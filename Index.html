@@ -39,6 +39,40 @@
       margin-bottom: 12px
     }
 
+    /* search + fisherman panel connection */
+    #searchCard {
+      margin-bottom: 0
+    }
+
+    #searchCard.is-attached {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0
+    }
+
+    #fishermanCard {
+      margin-top: -12px;
+      border-top: none;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0
+    }
+
+    /* smooth expand/collapse for fisherman panel */
+    .panel-collapsible {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: max-height 240ms ease, opacity 200ms ease, transform 200ms ease
+    }
+
+    .panel-collapsible.is-visible {
+      max-height: 2200px;
+      opacity: 1;
+      transform: none;
+      pointer-events: auto
+    }
+
     label {
       display: block;
       margin-top: 8px;
@@ -341,6 +375,47 @@
       padding-bottom: 8px
     }
 
+    /* fisherman card tab header */
+    .tabs-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px
+    }
+
+    .tabs-row .tabs {
+      margin-top: 0;
+      border-bottom: none;
+      padding-bottom: 0;
+      flex: 1;
+      justify-content: center
+    }
+
+    .tabs-spacer {
+      width: 28px;
+      flex: 0 0 28px
+    }
+
+    .icon-btn {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      padding: 0;
+      margin-top: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 0;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer
+    }
+
+    .icon-btn:hover {
+      color: #111
+    }
+
     .tab-btn {
       background: #f1f3f5;
       color: #111;
@@ -441,6 +516,51 @@
     .action-btn {
       padding: 6px 10px;
       font-size: 13px
+    }
+
+    /* compact tables (used for Payment History) */
+    table.table-compact {
+      table-layout: fixed
+    }
+
+    table.table-compact th,
+    table.table-compact td {
+      padding: 8px 8px
+    }
+
+    table.table-compact th {
+      font-size: 11px
+    }
+
+    table.table-compact td {
+      font-size: 13px
+    }
+
+    table.table-compact td,
+    table.table-compact th {
+      vertical-align: middle
+    }
+
+    table.table-compact th.num,
+    table.table-compact td.num {
+      text-align: right;
+      white-space: nowrap
+    }
+
+    table.table-compact th.date,
+    table.table-compact td.date {
+      white-space: nowrap
+    }
+
+    table.table-compact th.actions,
+    table.table-compact td.actions {
+      width: 160px
+    }
+
+    table.table-compact td.payid {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
     }
 
     .danger {
@@ -546,23 +666,31 @@
 
   <div class="page">
     <div class="grid">
-      <div class="card">
+      <div class="card" id="searchCard">
         <div class="search-row" style="margin-top:8px">
           <div class="typeahead">
             <input id="searchQ" placeholder="Search Fisherman by Name or ID" style="width:100%" autocomplete="off" />
             <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
           </div>
 
-          <a href="#" class="register-link" onclick="event.preventDefault(); openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">+ Register Fisherman</a>
+          <a id="registerLink" href="#" class="register-link"
+            onclick="event.preventDefault(); openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">+
+            Register Fisherman</a>
         </div>
 
         <div id="searchResults" style="margin-top:10px"></div>
       </div>
 
-      <div class="card hidden" id="admitCard">
-        <div class="tabs">
-          <button id="tabAdmit" class="tab-btn active" onclick="setAdmitTab('admit')">Admit Fishnet</button>
-          <button id="tabManage" class="tab-btn" onclick="setAdmitTab('manage')">Manage Drop-offs</button>
+      <div class="card panel-collapsible" id="fishermanCard">
+        <div class="tabs-row">
+          <button class="icon-btn" aria-label="Back to search" title="Back to search"
+            onclick="resetSearchFlow()">←</button>
+          <div class="tabs">
+            <button id="tabAdmit" class="tab-btn active" onclick="setAdmitTab('admit')">Admit Fishnet</button>
+            <button id="tabManage" class="tab-btn" onclick="setAdmitTab('manage')">Manage Drop-offs</button>
+            <button id="tabHistory" class="tab-btn" onclick="setAdmitTab('history')">Payment History</button>
+          </div>
+          <span class="tabs-spacer" aria-hidden="true"></span>
         </div>
 
         <div id="admitTabAdmit">
@@ -596,7 +724,6 @@
           </div>
           <div class="flex" style="margin-top:10px">
             <button id="dropSubmitBtn" class="submit-btn" onclick="logDrop()">Submit</button>
-            <button class="secondary" onclick="clearDropForm()">Clear</button>
           </div>
         </div>
 
@@ -605,6 +732,11 @@
           </div>
           <div id="manageDropsInfo" class="muted small" style="margin-top:6px"></div>
           <div id="manageDropsList" style="margin-top:10px"></div>
+        </div>
+
+        <div id="admitTabHistory" class="hidden">
+          <div id="payHistInfo" class="muted small" style="margin-top:10px"></div>
+          <div id="payHistTable" style="margin-top:10px"></div>
         </div>
       </div>
 
@@ -728,32 +860,168 @@
       let admitActiveTab = 'admit';
 
       function setAdmitVisible(isVisible) {
-        const card = document.getElementById('admitCard');
-        if (!card) return;
-        card.classList.toggle('hidden', !isVisible);
+        const card = document.getElementById('fishermanCard');
+        const searchCard = document.getElementById('searchCard');
+        const registerLink = document.getElementById('registerLink');
+        if (card) card.classList.toggle('is-visible', !!isVisible);
+        if (searchCard) searchCard.classList.toggle('is-attached', !!isVisible);
+        if (registerLink) registerLink.classList.toggle('hidden', !!isVisible);
       }
 
       function setAdmitTab(tab) {
-        admitActiveTab = (tab === 'manage') ? 'manage' : 'admit';
+        admitActiveTab = (tab === 'manage') ? 'manage' : (tab === 'history' ? 'history' : 'admit');
         const tabAdmit = document.getElementById('tabAdmit');
         const tabManage = document.getElementById('tabManage');
+        const tabHistory = document.getElementById('tabHistory');
         const panelAdmit = document.getElementById('admitTabAdmit');
         const panelManage = document.getElementById('admitTabManage');
+        const panelHistory = document.getElementById('admitTabHistory');
 
         if (tabAdmit) tabAdmit.classList.toggle('active', admitActiveTab === 'admit');
         if (tabManage) tabManage.classList.toggle('active', admitActiveTab === 'manage');
+        if (tabHistory) tabHistory.classList.toggle('active', admitActiveTab === 'history');
         if (panelAdmit) panelAdmit.classList.toggle('hidden', admitActiveTab !== 'admit');
         if (panelManage) panelManage.classList.toggle('hidden', admitActiveTab !== 'manage');
+        if (panelHistory) panelHistory.classList.toggle('hidden', admitActiveTab !== 'history');
 
         if (admitActiveTab === 'manage') {
           loadManageDropoffs();
         }
+
+        if (admitActiveTab === 'history') {
+          loadPaymentHistory();
+        }
+      }
+
+      function loadPaymentHistory() {
+        const fishermanId = (selectedFishermanId || '').toString().trim();
+        const info = document.getElementById('payHistInfo');
+        const tableWrap = document.getElementById('payHistTable');
+        if (!info || !tableWrap) return;
+
+        if (!fishermanId) {
+          info.innerText = 'Select a fisherman first.';
+          tableWrap.innerHTML = '';
+          return;
+        }
+
+        info.innerText = 'Loading...';
+        tableWrap.innerHTML = '';
+
+        google.script.run
+          .withSuccessHandler(rows => {
+            tableWrap.innerHTML = '';
+            const paid = (rows || []).filter(p => (p && (p.fishermanId + '') === (fishermanId + '')));
+            if (!paid || paid.length === 0) {
+              info.innerText = 'No paid payments for this fisherman.';
+              return;
+            }
+
+            info.innerText = '';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'table-wrap';
+            const table = document.createElement('table');
+            table.className = 'table-compact';
+            table.innerHTML =
+              '<thead>' +
+              '<tr>' +
+              '<th>Payment ID</th>' +
+              '<th class="num">Weight</th>' +
+              '<th class="num">Payout</th>' +
+              '<th class="date">Date</th>' +
+              '<th class="actions">&nbsp;</th>' +
+              '</tr>' +
+              '</thead>' +
+              '<tbody></tbody>';
+
+            const tbody = table.querySelector('tbody');
+
+            paid.forEach(p => {
+              const tr = document.createElement('tr');
+
+              const tdPid = document.createElement('td');
+              tdPid.className = 'payid';
+              tdPid.textContent = (p.paymentId || '').toString();
+              tr.appendChild(tdPid);
+
+              const tdW = document.createElement('td');
+              tdW.className = 'num';
+              tdW.textContent = formatKg(p.accumulatedKg || 0) + ' kg';
+              tr.appendChild(tdW);
+
+              const tdPay = document.createElement('td');
+              tdPay.className = 'num';
+              const payoutRaw = (p.payloadRM !== '' && p.payloadRM != null) ? (p.payloadRM + '') : '0';
+              tdPay.textContent = payoutRaw + ' RM';
+              tr.appendChild(tdPay);
+
+              const tdDate = document.createElement('td');
+              tdDate.className = 'cell-muted date';
+              tdDate.textContent = p.date ? formatPaymentExplorerDateTime(p.date) : '';
+              tr.appendChild(tdDate);
+
+              const tdActions = document.createElement('td');
+              tdActions.className = 'actions';
+              const btn = document.createElement('button');
+              btn.className = 'danger action-btn';
+              btn.textContent = 'Mark as unpaid';
+              btn.onclick = () => {
+                const pid = (p.paymentId || '').toString();
+                if (!pid) return;
+                if (!confirm('Mark payment ' + pid + ' as unpaid?')) return;
+                btn.disabled = true;
+                btn.textContent = 'Working…';
+                google.script.run
+                  .withSuccessHandler(() => {
+                    loadPaymentHistory();
+                    loadPaymentExplorer();
+                    loadManageDropoffs();
+                  })
+                  .withFailureHandler(err => {
+                    btn.disabled = false;
+                    btn.textContent = 'Mark as unpaid';
+                    alert('Error: ' + (err && err.message ? err.message : err));
+                  })
+                  .markPaymentUnpaid(pid);
+              };
+
+              tdActions.appendChild(btn);
+              tr.appendChild(tdActions);
+
+              tbody.appendChild(tr);
+            });
+
+            wrap.appendChild(table);
+            tableWrap.appendChild(wrap);
+          })
+          .withFailureHandler(err => {
+            info.innerText = '';
+            tableWrap.innerHTML = '';
+            alert('Error: ' + (err && err.message ? err.message : err));
+          })
+          .getPaidPayments();
       }
 
       function onSuccessAsync(handler) {
         return google.script.run.withSuccessHandler(handler).withFailureHandler(err => {
           alert('Error: ' + (err.message || err));
         });
+      }
+
+      function resetSearchFlow() {
+        // Back arrow in fisherman panel: reset selection + clear search UI.
+        clearDropForm();
+        try {
+          const q = document.getElementById('searchQ');
+          if (q) q.value = '';
+          const results = document.getElementById('searchResults');
+          if (results) results.innerHTML = '';
+          hideTypeahead();
+        } catch (e) { }
+
+        // Default tab for next selection.
+        try { setAdmitTab('admit'); } catch (e) { }
       }
 
       function loadActiveDeal() {
@@ -992,12 +1260,22 @@
         // Keep manage tab list in sync when switching fishermen.
         if (selectedFishermanId) {
           loadManageDropoffs();
+
+          if (admitActiveTab === 'history') {
+            loadPaymentHistory();
+          }
         } else {
           try {
             document.getElementById('manageDropsInfo').innerText = '';
             document.getElementById('manageDropsList').innerHTML = '';
           } catch (e) { }
         }
+
+        // Keep register link visibility in sync.
+        try {
+          const registerLink = document.getElementById('registerLink');
+          if (registerLink) registerLink.classList.toggle('hidden', !!selectedFishermanId);
+        } catch (e) { }
       }
 
       function loadManageDropoffs() {
@@ -1756,6 +2034,11 @@
       loadVolunteerContribution();
       loadPaymentExplorer();
       setAdmitVisible(false);
+
+      try {
+        const registerLink = document.getElementById('registerLink');
+        if (registerLink) registerLink.classList.remove('hidden');
+      } catch (e) { }
       setAdmitTab('admit');
     </script>
 

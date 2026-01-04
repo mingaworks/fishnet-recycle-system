@@ -339,6 +339,70 @@ function confirmPayment(paymentId) {
     throw new Error('Payment not found: ' + paymentId);
 }
 
+function markPaymentUnpaid(paymentId) {
+    if (!paymentId) throw new Error('paymentId required');
+    _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
+
+    const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
+    const pHeaders = headerMap(paymentsSheet);
+    const paymentRows = getDataRows(paymentsSheet);
+
+    const pidCol = pHeaders['Payment ID'];
+    const statusCol = pHeaders['Status'];
+    const fishermanIdCol = pHeaders['Fisherman ID'];
+    if (!pidCol || !statusCol || !fishermanIdCol) throw new Error('Payment History headers missing Payment ID/Status/Fisherman ID');
+
+    let fishermanId = '';
+    let foundRowIndex = 0;
+
+    for (let i = 0; i < paymentRows.length; i++) {
+        const r = paymentRows[i];
+        const rowPid = (r[pidCol - 1] || '').toString().trim();
+        if (rowPid !== (paymentId + '').toString()) continue;
+
+        const statusNorm = _normalizeStatus(r[statusCol - 1]);
+        if (statusNorm !== 'paid') throw new Error('Payment is not paid.');
+
+        fishermanId = (r[fishermanIdCol - 1] || '').toString();
+        foundRowIndex = 2 + i;
+        break;
+    }
+
+    if (!foundRowIndex) throw new Error('Payment not found: ' + paymentId);
+    if (!fishermanId) throw new Error('Fisherman ID missing for payment: ' + paymentId);
+
+    // Clear payment tags from drop-offs linked to this payment.
+    const dropsSheet = getSheet(SHEET_NAMES.DROPS);
+    const dHeaders = headerMap(dropsSheet);
+    const dropRows = getDataRows(dropsSheet);
+    const dPidCol = dHeaders['Payment ID'];
+    const dFidCol = dHeaders['Fisherman ID'];
+
+    for (let i = 0; i < dropRows.length; i++) {
+        const r = dropRows[i];
+        const fid = dFidCol ? (r[dFidCol - 1] || '').toString() : '';
+        if (fid && fid !== (fishermanId + '')) continue;
+        const pid = dPidCol ? (r[dPidCol - 1] || '').toString().trim() : '';
+        if (!pid) continue;
+        if (pid !== (paymentId + '')) continue;
+        const rowIndex = 2 + i;
+        updateDropRow(rowIndex, { 'Payment ID': '' });
+    }
+
+    // Remove the paid payment record itself.
+    paymentsSheet.deleteRow(foundRowIndex);
+
+    // Rebuild open payments from scratch (keeps other paid payments intact).
+    const reevaluation = reevaluatePaymentsForFisherman(fishermanId);
+
+    return {
+        ok: true,
+        paymentId: (paymentId + ''),
+        fishermanId: (fishermanId + ''),
+        reevaluation
+    };
+}
+
 function getAccumulatingPayment(fishermanId) {
     const sheet = getSheet(SHEET_NAMES.PAYMENTS);
     const headers = headerMap(sheet);
