@@ -18,8 +18,14 @@
 
     body {
       font-family: Inter, Arial, Helvetica, sans-serif;
-      margin: 14px;
+      margin: 0;
       color: #222
+    }
+
+    .page {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 14px
     }
 
     h3 {
@@ -116,7 +122,7 @@
       color: #fff;
       padding: 18px 16px;
       border-radius: 0;
-      margin: -14px -14px 14px -14px
+      margin: 0 0 14px 0
     }
 
     .topbar-title {
@@ -218,12 +224,109 @@
       }
     }
 
-    @media (min-width:640px) {
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr 420px;
-        gap: 12px
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      width: 100%
+    }
+
+    .search-row .typeahead {
+      min-width: 0
+    }
+
+    .register-link {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 2px 0
+    }
+
+    .register-link:hover {
+      text-decoration: underline
+    }
+
+    @media (max-width:520px) {
+      .page {
+        padding: 0
       }
+    }
+
+    details.collapsible {
+      padding: 0
+    }
+
+    details.collapsible>summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #222;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fafafa;
+      border-bottom: 1px solid #eee
+    }
+
+    details.collapsible:not([open])>summary {
+      border-bottom: none
+    }
+
+    details.collapsible>summary::-webkit-details-marker {
+      display: none
+    }
+
+    details.collapsible>summary::before {
+      content: '▸';
+      color: var(--muted);
+      font-weight: 800
+    }
+
+    details.collapsible[open]>summary::before {
+      content: '▾'
+    }
+
+    .summary-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0
+    }
+
+    .summary-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0
+    }
+
+    .summary-subtitle {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .summary-actions {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .summary-actions button {
+      margin-top: 0
+    }
+
+    .collapsible-body {
+      padding: 0 12px 12px 12px
     }
 
     .hidden {
@@ -430,7 +533,7 @@
     .footer-divider {
       height: 1px;
       background: #eee;
-      margin: 18px -14px 0 -14px
+      margin: 18px 0 0 0
     }
   </style>
 </head>
@@ -441,18 +544,18 @@
     <div class="topbar-subtitle">by Pomen Laut Projects</div>
   </header>
 
-  <div class="grid">
-    <div>
+  <div class="page">
+    <div class="grid">
       <div class="card">
-        <div class="typeahead" style="margin-top:8px">
-          <input id="searchQ" placeholder="Search Fisherman by Name or ID" style="width:100%" autocomplete="off" />
-          <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
+        <div class="search-row" style="margin-top:8px">
+          <div class="typeahead">
+            <input id="searchQ" placeholder="Search Fisherman by Name or ID" style="width:100%" autocomplete="off" />
+            <div id="typeaheadPanel" class="typeahead-panel" style="display:none"></div>
+          </div>
+
+          <a href="#" class="register-link" onclick="event.preventDefault(); openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">+ Register Fisherman</a>
         </div>
 
-        <div style="margin-top:10px">
-          <button onclick="openRegisterModal({ prefillName: document.getElementById('searchQ').value.trim() })">Register
-            Fisherman</button>
-        </div>
         <div id="searchResults" style="margin-top:10px"></div>
       </div>
 
@@ -504,1160 +607,1181 @@
           <div id="manageDropsList" style="margin-top:10px"></div>
         </div>
       </div>
+
+      <details class="collapsible card" open>
+        <summary>
+          <span class="summary-text">
+            <span class="summary-title">Due Payments</span>
+            <span class="muted small summary-subtitle"><b>Active deal:</b> <span id="activeDeal"
+                class="muted">Loading...</span></span>
+          </span>
+        </summary>
+        <div class="collapsible-body">
+          <div id="dueInfo" class="muted small" style="margin-top:6px">Loading...</div>
+          <div id="dueList" style="margin-top:10px"></div>
+        </div>
+      </details>
+
+      <details class="collapsible card" open>
+        <summary>
+          <span class="summary-title">Payment Explorer <span class="muted">•</span> <span id="paidMonthLabel"
+              class="muted">Loading...</span></span>
+          <span class="right summary-actions">
+            <button id="paidPrev" class="secondary"
+              onclick="event.preventDefault(); event.stopPropagation(); paidPrevMonth();">←</button>
+            <button id="paidNext" class="secondary"
+              onclick="event.preventDefault(); event.stopPropagation(); paidNextMonth();">→</button>
+          </span>
+        </summary>
+        <div class="collapsible-body">
+          <div id="paidInfo" class="muted small" style="margin-top:6px">Loading...</div>
+          <div id="paidList" style="margin-top:10px"></div>
+        </div>
+      </details>
+
+      <details class="collapsible card" open>
+        <summary>
+          <span class="summary-text">
+            <span class="summary-title">Volunteer contribution <span class="muted">•</span> <span id="volMonthLabel"
+                class="muted">Loading...</span></span>
+            <span id="volSummary" class="muted small"></span>
+          </span>
+          <span class="right summary-actions">
+            <button id="volPrev" class="secondary"
+              onclick="event.preventDefault(); event.stopPropagation(); volPrevMonth();">←</button>
+            <button id="volNext" class="secondary"
+              onclick="event.preventDefault(); event.stopPropagation(); volNextMonth();">→</button>
+          </span>
+        </summary>
+        <div class="collapsible-body">
+          <div id="volList" style="margin-top:10px"></div>
+        </div>
+      </details>
     </div>
 
-    <div>
-      <div class="card" id="activeDealCard">
-        <strong>Active Deal</strong>
-        <div id="activeDeal" class="muted small" style="margin-top:8px">Loading...</div>
-      </div>
+    <!-- register modal (shown when search yields no results) -->
+    <div id="modalBackdrop" class="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h4>Register Fisherman</h4>
+        <div class="form">
+          <div class="form-grid">
+            <div class="field-name">Full name</div>
+            <input id="mRegName" />
 
-      <div class="card">
-        <div class="muted" style="margin-top:8px;font-size:16px;font-weight:800">Due payments</div>
-        <div id="dueInfo" class="muted small" style="margin-top:6px">Loading...</div>
-        <div id="dueList" style="margin-top:10px"></div>
+            <div class="field-name">Phone</div>
+            <input id="mRegPhone" />
 
-        <div style="height:1px;background:#eee;margin:12px 0"></div>
-
-        <div class="flex" style="margin-top:6px">
-          <div class="muted" style="font-size:16px;font-weight:800">Payment explorer</div>
-          <div class="right" style="text-align:right">
-            <div class="flex" style="gap:6px;justify-content:flex-end">
-              <button id="paidPrev" class="secondary" onclick="paidPrevMonth()">←</button>
-              <button id="paidNext" class="secondary" onclick="paidNextMonth()">→</button>
-            </div>
-            <div id="paidMonthLabel" class="muted small" style="margin-top:6px">Loading...</div>
+            <div class="field-name">Village</div>
+            <input id="mRegVillage" />
           </div>
         </div>
-
-        <div id="paidInfo" class="muted small" style="margin-top:6px">Loading...</div>
-        <div id="paidList" style="margin-top:10px"></div>
+        <div style="margin-top:10px" class="flex">
+          <button id="mRegSubmit" onclick="registerFromModal()">Create & Use</button>
+          <button class="secondary" onclick="closeModal()">Cancel</button>
+          <div id="mRegResult" class="muted small right"></div>
+        </div>
       </div>
+    </div>
 
-      <div class="card">
-        <div class="flex">
-          <strong>Volunteer contribution</strong>
-          <div class="right" style="text-align:right">
-            <div class="flex" style="gap:6px;justify-content:flex-end">
-              <button id="volPrev" class="secondary" onclick="volPrevMonth()">←</button>
-              <button id="volNext" class="secondary" onclick="volNextMonth()">→</button>
-            </div>
-            <div id="volMonthLabel" class="muted small" style="margin-top:6px">Loading...</div>
+    <!-- payment confirmation modal (irreversible) -->
+    <div id="paymentModalBackdrop" class="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h4>Confirm Payment</h4>
+        <div class="notice" style="margin-top:10px">This marks the payment as <b>Paid</b> and cannot be undone.</div>
+        <div class="form">
+          <div class="form-grid">
+            <div class="field-name">Fisherman</div>
+            <div class="field-value"><b id="mPayFisherman">—</b></div>
+
+            <div class="field-name">Total weight</div>
+            <div class="field-value"><b id="mPayWeight">—</b></div>
+
+            <div class="field-name">Payment amount</div>
+            <div class="field-value"><b id="mPayAmount">—</b></div>
+
+            <div class="field-name">Payment ID</div>
+            <div class="field-value"><span id="mPayId" class="muted">—</span></div>
           </div>
         </div>
-        <div id="volSummary" class="muted small" style="margin-top:6px"></div>
-        <div id="volList" style="margin-top:10px"></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- register modal (shown when search yields no results) -->
-  <div id="modalBackdrop" class="modal-backdrop">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h4>Register Fisherman</h4>
-      <div class="form">
-        <div class="form-grid">
-          <div class="field-name">Full name</div>
-          <input id="mRegName" />
-
-          <div class="field-name">Phone</div>
-          <input id="mRegPhone" />
-
-          <div class="field-name">Village</div>
-          <input id="mRegVillage" />
+        <div style="margin-top:10px" class="flex">
+          <button id="mPayConfirm" class="danger" onclick="confirmPaymentFromModal()">Confirm payment</button>
+          <button id="mPayCancel" class="secondary" onclick="closePaymentModal()">Cancel</button>
+          <div id="mPayResult" class="muted small right"></div>
         </div>
       </div>
-      <div style="margin-top:10px" class="flex">
-        <button id="mRegSubmit" onclick="registerFromModal()">Create & Use</button>
-        <button class="secondary" onclick="closeModal()">Cancel</button>
-        <div id="mRegResult" class="muted small right"></div>
-      </div>
     </div>
-  </div>
 
-  <!-- payment confirmation modal (irreversible) -->
-  <div id="paymentModalBackdrop" class="modal-backdrop">
-    <div class="modal" role="dialog" aria-modal="true">
-      <h4>Confirm Payment</h4>
-      <div class="notice" style="margin-top:10px">This marks the payment as <b>Paid</b> and cannot be undone.</div>
-      <div class="form">
-        <div class="form-grid">
-          <div class="field-name">Fisherman</div>
-          <div class="field-value"><b id="mPayFisherman">—</b></div>
+    <script>
+      let lastSelectedFisherman = null;
+      let modalCloseTimer = null;
+      let pendingPaymentConfirm = null;
+      let volMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      let paidMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      let selectedFishermanId = '';
 
-          <div class="field-name">Total weight</div>
-          <div class="field-value"><b id="mPayWeight">—</b></div>
+      let fishermenCache = [];
+      let fishermenLoaded = false;
+      let typeaheadHideTimer = null;
 
-          <div class="field-name">Payment amount</div>
-          <div class="field-value"><b id="mPayAmount">—</b></div>
+      let activeDealCache = null;
 
-          <div class="field-name">Payment ID</div>
-          <div class="field-value"><span id="mPayId" class="muted">—</span></div>
-        </div>
-      </div>
-      <div style="margin-top:10px" class="flex">
-        <button id="mPayConfirm" class="danger" onclick="confirmPaymentFromModal()">Confirm payment</button>
-        <button id="mPayCancel" class="secondary" onclick="closePaymentModal()">Cancel</button>
-        <div id="mPayResult" class="muted small right"></div>
-      </div>
-    </div>
-  </div>
+      let admitActiveTab = 'admit';
 
-  <script>
-    let lastSelectedFisherman = null;
-    let modalCloseTimer = null;
-    let pendingPaymentConfirm = null;
-    let volMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    let paidMonthCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    let selectedFishermanId = '';
-
-    let fishermenCache = [];
-    let fishermenLoaded = false;
-    let typeaheadHideTimer = null;
-
-    let activeDealCache = null;
-
-    let admitActiveTab = 'admit';
-
-    function setAdmitVisible(isVisible) {
-      const card = document.getElementById('admitCard');
-      if (!card) return;
-      card.classList.toggle('hidden', !isVisible);
-    }
-
-    function setAdmitTab(tab) {
-      admitActiveTab = (tab === 'manage') ? 'manage' : 'admit';
-      const tabAdmit = document.getElementById('tabAdmit');
-      const tabManage = document.getElementById('tabManage');
-      const panelAdmit = document.getElementById('admitTabAdmit');
-      const panelManage = document.getElementById('admitTabManage');
-
-      if (tabAdmit) tabAdmit.classList.toggle('active', admitActiveTab === 'admit');
-      if (tabManage) tabManage.classList.toggle('active', admitActiveTab === 'manage');
-      if (panelAdmit) panelAdmit.classList.toggle('hidden', admitActiveTab !== 'admit');
-      if (panelManage) panelManage.classList.toggle('hidden', admitActiveTab !== 'manage');
-
-      if (admitActiveTab === 'manage') {
-        loadManageDropoffs();
-      }
-    }
-
-    function onSuccessAsync(handler) {
-      return google.script.run.withSuccessHandler(handler).withFailureHandler(err => {
-        alert('Error: ' + (err.message || err));
-      });
-    }
-
-    function loadActiveDeal() {
-      onSuccessAsync(deal => {
-        const el = document.getElementById('activeDeal');
-        activeDealCache = deal || null;
-        if (!deal) { el.innerHTML = '<div class="notice">No active deal configured.</div>'; return; }
-        el.innerHTML = '<div class="small"><b>Threshold:</b> ' + deal.data.thresholdKg + ' kg</div>' +
-          '<div class="small"><b>Rates (RM/kg):</b> Clean ' + deal.data.rateClean + ', Partial ' + deal.data.ratePartial + ', Unclean ' + deal.data.rateUnclean + '</div>';
-      }).getActiveDeal();
-    }
-
-    function search() {
-      const q = document.getElementById('searchQ').value.trim();
-      const container = document.getElementById('searchResults');
-
-      // Prefer cached search for typeahead UX; fallback to server if cache not ready.
-      if (fishermenLoaded) {
-        const list = filterFishermen(q, 30);
-        renderSearchResults(container, list);
-        renderTypeahead(list, q);
-        return;
+      function setAdmitVisible(isVisible) {
+        const card = document.getElementById('admitCard');
+        if (!card) return;
+        card.classList.toggle('hidden', !isVisible);
       }
 
-      container.innerHTML = 'Searching...';
-      onSuccessAsync(list => {
-        if (!Array.isArray(list)) {
-          container.innerHTML = '<div class="notice">Unexpected search response. Open DevTools console for details.</div>';
-          try { console.error('findFishermen unexpected payload:', list); } catch (e) { }
+      function setAdmitTab(tab) {
+        admitActiveTab = (tab === 'manage') ? 'manage' : 'admit';
+        const tabAdmit = document.getElementById('tabAdmit');
+        const tabManage = document.getElementById('tabManage');
+        const panelAdmit = document.getElementById('admitTabAdmit');
+        const panelManage = document.getElementById('admitTabManage');
+
+        if (tabAdmit) tabAdmit.classList.toggle('active', admitActiveTab === 'admit');
+        if (tabManage) tabManage.classList.toggle('active', admitActiveTab === 'manage');
+        if (panelAdmit) panelAdmit.classList.toggle('hidden', admitActiveTab !== 'admit');
+        if (panelManage) panelManage.classList.toggle('hidden', admitActiveTab !== 'manage');
+
+        if (admitActiveTab === 'manage') {
+          loadManageDropoffs();
+        }
+      }
+
+      function onSuccessAsync(handler) {
+        return google.script.run.withSuccessHandler(handler).withFailureHandler(err => {
+          alert('Error: ' + (err.message || err));
+        });
+      }
+
+      function loadActiveDeal() {
+        onSuccessAsync(deal => {
+          const el = document.getElementById('activeDeal');
+          activeDealCache = deal || null;
+          if (!el) return;
+
+          if (!deal || !deal.data) {
+            el.textContent = 'No active deal configured.';
+            return;
+          }
+
+          const thresholdKg = (deal.data.thresholdKg != null) ? (deal.data.thresholdKg + '') : '—';
+          const rateClean = (deal.data.rateClean != null) ? (deal.data.rateClean + '') : '—';
+          const ratePartial = (deal.data.ratePartial != null) ? (deal.data.ratePartial + '') : '—';
+          const rateUnclean = (deal.data.rateUnclean != null) ? (deal.data.rateUnclean + '') : '—';
+
+          el.textContent =
+            'Threshold: ' + thresholdKg + ' kg' +
+            ' • Rates (RM/kg): Clean ' + rateClean + ', Partial ' + ratePartial + ', Unclean ' + rateUnclean;
+        }).getActiveDeal();
+      }
+
+      function search() {
+        const q = document.getElementById('searchQ').value.trim();
+        const container = document.getElementById('searchResults');
+
+        // Prefer cached search for typeahead UX; fallback to server if cache not ready.
+        if (fishermenLoaded) {
+          const list = filterFishermen(q, 30);
+          renderSearchResults(container, list);
+          renderTypeahead(list, q);
           return;
         }
-        renderSearchResults(container, list);
-      }).findFishermen(q);
-    }
 
-    function renderSearchResults(container, list) {
-      container.innerHTML = '';
-      if (!list || list.length === 0) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'muted';
-        wrapper.innerHTML = '<div>No matches.</div><div class="small" style="margin-top:6px">Use <b>Register Fisherman</b> to create a new record.</div>';
-        container.appendChild(wrapper);
-        return;
+        container.innerHTML = 'Searching...';
+        onSuccessAsync(list => {
+          if (!Array.isArray(list)) {
+            container.innerHTML = '<div class="notice">Unexpected search response. Open DevTools console for details.</div>';
+            try { console.error('findFishermen unexpected payload:', list); } catch (e) { }
+            return;
+          }
+          renderSearchResults(container, list);
+        }).findFishermen(q);
       }
-      list.forEach(l => {
-        const d = document.createElement('div');
-        d.className = 'list-item';
-        d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + escapeHtml(l.personId) + ' — ' + escapeHtml(l.village || '') + ' — ' + escapeHtml(l.phone || '') + '</div>';
-        d.onclick = () => { selectFisherman(l); hideTypeahead(); };
-        container.appendChild(d);
-      });
-    }
 
-    function filterFishermen(q, limit) {
-      const query = (q || '').toString().trim().toLowerCase();
-      if (!query) return [];
-      const results = [];
-      for (let i = 0; i < fishermenCache.length; i++) {
-        const f = fishermenCache[i];
-        const id = (f.personId || '').toString().toLowerCase();
-        const name = (f.fullName || '').toString().toLowerCase();
-        if (id.indexOf(query) !== -1 || name.indexOf(query) !== -1) {
-          results.push(f);
-          if (limit && results.length >= limit) break;
+      function renderSearchResults(container, list) {
+        container.innerHTML = '';
+        if (!list || list.length === 0) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'muted';
+          wrapper.innerHTML = '<div>No matches.</div><div class="small" style="margin-top:6px">Use <b>Register Fisherman</b> to create a new record.</div>';
+          container.appendChild(wrapper);
+          return;
+        }
+        list.forEach(l => {
+          const d = document.createElement('div');
+          d.className = 'list-item';
+          d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + escapeHtml(l.personId) + ' — ' + escapeHtml(l.village || '') + ' — ' + escapeHtml(l.phone || '') + '</div>';
+          d.onclick = () => { selectFisherman(l); hideTypeahead(); };
+          container.appendChild(d);
+        });
+      }
+
+      function filterFishermen(q, limit) {
+        const query = (q || '').toString().trim().toLowerCase();
+        if (!query) return [];
+        const results = [];
+        for (let i = 0; i < fishermenCache.length; i++) {
+          const f = fishermenCache[i];
+          const id = (f.personId || '').toString().toLowerCase();
+          const name = (f.fullName || '').toString().toLowerCase();
+          if (id.indexOf(query) !== -1 || name.indexOf(query) !== -1) {
+            results.push(f);
+            if (limit && results.length >= limit) break;
+          }
+        }
+        return results;
+      }
+
+      function showTypeahead() {
+        const panel = document.getElementById('typeaheadPanel');
+        panel.style.display = 'block';
+      }
+
+      function hideTypeahead() {
+        const panel = document.getElementById('typeaheadPanel');
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+      }
+
+      function renderTypeahead(list, q) {
+        const panel = document.getElementById('typeaheadPanel');
+        const query = (q || '').toString().trim();
+        if (!query) {
+          hideTypeahead();
+          return;
+        }
+        panel.innerHTML = '';
+        showTypeahead();
+
+        if (!list || list.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'typeahead-empty muted small';
+          empty.innerHTML = 'No matches. Use <b>Register Fisherman</b> to create a new record.';
+          panel.appendChild(empty);
+          return;
+        }
+
+        list.slice(0, 8).forEach(l => {
+          const d = document.createElement('div');
+          d.className = 'list-item';
+          d.style.marginTop = '0';
+          d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + escapeHtml(l.personId) + ' — ' + escapeHtml(l.village || '') + '</div>';
+          d.onmousedown = (e) => {
+            // use mousedown so selection happens before input blur
+            e.preventDefault();
+            selectFisherman(l);
+            document.getElementById('searchQ').value = l.fullName;
+            hideTypeahead();
+          };
+          panel.appendChild(d);
+        });
+      }
+
+      function escapeHtml(s) { return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+      function normalizeSpaces(s) {
+        return (s || '').toString().replace(/[\s\u00A0]+/g, ' ').trim();
+      }
+
+      function titleCaseInput(s) {
+        const str = normalizeSpaces(s).toLowerCase();
+        if (!str) return '';
+        // Capitalize after start/space/hyphen/apostrophe.
+        return str.replace(/(^|[\s\-'])[a-z]/g, m => m.toUpperCase());
+      }
+
+      function parseDMYDateTime(s) {
+        // Accepts "DD/MM/YYYY HH:MM:SS" (or without time). Returns Date or null.
+        const str = (s || '').toString().trim();
+        if (!str) return null;
+        const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (!m) return null;
+        const dd = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        const yyyy = parseInt(m[3], 10);
+        const hh = m[4] ? parseInt(m[4], 10) : 0;
+        const mi = m[5] ? parseInt(m[5], 10) : 0;
+        const ss = m[6] ? parseInt(m[6], 10) : 0;
+        const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
+        if (isNaN(d.getTime())) return null;
+        return d;
+      }
+
+      function formatPaymentExplorerDateTime(s) {
+        // UI format: "17 Nov 2025 17:35" (24h)
+        const d = parseDMYDateTime(s);
+        if (!d) return (s || '').toString();
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dd = d.getDate();
+        const mon = months[d.getMonth()] || '';
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return dd + ' ' + mon + ' ' + yyyy + ' ' + hh + ':' + mm;
+      }
+
+      function monthKeyFromDate(d) {
+        if (!d) return 'Unknown';
+        const y = d.getFullYear();
+        const m = d.getMonth() + 1;
+        return y + '-' + (m < 10 ? ('0' + m) : ('' + m));
+      }
+
+      function monthLabelFromKey(k) {
+        if (!k || k === 'Unknown') return 'Unknown month';
+        const parts = (k + '').split('-');
+        if (parts.length !== 2) return 'Unknown month';
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = new Date(y, (m || 1) - 1, 1);
+        try {
+          return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+        } catch (e) {
+          return (m + '/' + y);
         }
       }
-      return results;
-    }
 
-    function showTypeahead() {
-      const panel = document.getElementById('typeaheadPanel');
-      panel.style.display = 'block';
-    }
-
-    function hideTypeahead() {
-      const panel = document.getElementById('typeaheadPanel');
-      panel.style.display = 'none';
-      panel.innerHTML = '';
-    }
-
-    function renderTypeahead(list, q) {
-      const panel = document.getElementById('typeaheadPanel');
-      const query = (q || '').toString().trim();
-      if (!query) {
-        hideTypeahead();
-        return;
-      }
-      panel.innerHTML = '';
-      showTypeahead();
-
-      if (!list || list.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'typeahead-empty muted small';
-        empty.innerHTML = 'No matches. Use <b>Register Fisherman</b> to create a new record.';
-        panel.appendChild(empty);
-        return;
+      function formatKg(v) {
+        const n = parseFloat(v);
+        if (!isFinite(n)) return '0';
+        const rounded = Math.round(n * 100) / 100;
+        return (rounded % 1 === 0) ? ('' + rounded.toFixed(0)) : ('' + rounded.toFixed(2));
       }
 
-      list.slice(0, 8).forEach(l => {
-        const d = document.createElement('div');
-        d.className = 'list-item';
-        d.style.marginTop = '0';
-        d.innerHTML = '<div><b>' + escapeHtml(l.fullName) + '</b></div><div class="small muted">' + escapeHtml(l.personId) + ' — ' + escapeHtml(l.village || '') + '</div>';
-        d.onmousedown = (e) => {
-          // use mousedown so selection happens before input blur
-          e.preventDefault();
-          selectFisherman(l);
-          document.getElementById('searchQ').value = l.fullName;
-          hideTypeahead();
-        };
-        panel.appendChild(d);
-      });
-    }
+      function selectFisherman(f) {
+        lastSelectedFisherman = f;
+        selectedFishermanId = (f.personId || '').toString();
 
-    function escapeHtml(s) { return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        const idText = document.getElementById('dropFishermanIdText');
+        if (idText) idText.innerText = selectedFishermanId || '—';
 
-    function normalizeSpaces(s) {
-      return (s || '').toString().replace(/[\s\u00A0]+/g, ' ').trim();
-    }
+        const nameEl = document.getElementById('dropFishermanName');
+        if (nameEl) {
+          const nm = f && f.fullName ? (f.fullName + '').toString() : '';
+          nameEl.innerText = nm || 'None selected';
+        }
 
-    function titleCaseInput(s) {
-      const str = normalizeSpaces(s).toLowerCase();
-      if (!str) return '';
-      // Capitalize after start/space/hyphen/apostrophe.
-      return str.replace(/(^|[\s\-'])[a-z]/g, m => m.toUpperCase());
-    }
+        const accumulatingEl = document.getElementById('dropAccumulatingWeight');
+        if (accumulatingEl) accumulatingEl.innerText = selectedFishermanId ? 'Loading…' : '—';
+        if (selectedFishermanId) {
+          google.script.run
+            .withSuccessHandler(res => {
+              const kg = res && typeof res.accumulatingKg !== 'undefined' ? res.accumulatingKg : 0;
+              if (accumulatingEl) {
+                const threshold = activeDealCache && activeDealCache.data ? (parseFloat(activeDealCache.data.thresholdKg) || 0) : 0;
+                if (!threshold) {
+                  accumulatingEl.innerText = '—';
+                } else {
+                  const remaining = Math.max(0, (threshold || 0) - (parseFloat(kg) || 0));
+                  accumulatingEl.innerText = formatKg(remaining) + ' kg';
+                }
+              }
+            })
+            .withFailureHandler(err => {
+              if (accumulatingEl) accumulatingEl.innerText = '—';
+              try { console.error(err); } catch (e) { }
+            })
+            .getAccumulatingPaymentSummary(selectedFishermanId);
+        }
 
-    function parseDMYDateTime(s) {
-      // Accepts "DD/MM/YYYY HH:MM:SS" (or without time). Returns Date or null.
-      const str = (s || '').toString().trim();
-      if (!str) return null;
-      const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
-      if (!m) return null;
-      const dd = parseInt(m[1], 10);
-      const mm = parseInt(m[2], 10);
-      const yyyy = parseInt(m[3], 10);
-      const hh = m[4] ? parseInt(m[4], 10) : 0;
-      const mi = m[5] ? parseInt(m[5], 10) : 0;
-      const ss = m[6] ? parseInt(m[6], 10) : 0;
-      const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
-      if (isNaN(d.getTime())) return null;
-      return d;
-    }
+        setAdmitVisible(!!selectedFishermanId);
 
-    function formatPaymentExplorerDateTime(s) {
-      // UI format: "17 Nov 2025 17:35" (24h)
-      const d = parseDMYDateTime(s);
-      if (!d) return (s || '').toString();
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const dd = d.getDate();
-      const mon = months[d.getMonth()] || '';
-      const yyyy = d.getFullYear();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      return dd + ' ' + mon + ' ' + yyyy + ' ' + hh + ':' + mm;
-    }
-
-    function monthKeyFromDate(d) {
-      if (!d) return 'Unknown';
-      const y = d.getFullYear();
-      const m = d.getMonth() + 1;
-      return y + '-' + (m < 10 ? ('0' + m) : ('' + m));
-    }
-
-    function monthLabelFromKey(k) {
-      if (!k || k === 'Unknown') return 'Unknown month';
-      const parts = (k + '').split('-');
-      if (parts.length !== 2) return 'Unknown month';
-      const y = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10);
-      const d = new Date(y, (m || 1) - 1, 1);
-      try {
-        return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-      } catch (e) {
-        return (m + '/' + y);
-      }
-    }
-
-    function formatKg(v) {
-      const n = parseFloat(v);
-      if (!isFinite(n)) return '0';
-      const rounded = Math.round(n * 100) / 100;
-      return (rounded % 1 === 0) ? ('' + rounded.toFixed(0)) : ('' + rounded.toFixed(2));
-    }
-
-    function selectFisherman(f) {
-      lastSelectedFisherman = f;
-      selectedFishermanId = (f.personId || '').toString();
-
-      const idText = document.getElementById('dropFishermanIdText');
-      if (idText) idText.innerText = selectedFishermanId || '—';
-
-      const nameEl = document.getElementById('dropFishermanName');
-      if (nameEl) {
-        const nm = f && f.fullName ? (f.fullName + '').toString() : '';
-        nameEl.innerText = nm || 'None selected';
+        // Keep manage tab list in sync when switching fishermen.
+        if (selectedFishermanId) {
+          loadManageDropoffs();
+        } else {
+          try {
+            document.getElementById('manageDropsInfo').innerText = '';
+            document.getElementById('manageDropsList').innerHTML = '';
+          } catch (e) { }
+        }
       }
 
-      const accumulatingEl = document.getElementById('dropAccumulatingWeight');
-      if (accumulatingEl) accumulatingEl.innerText = selectedFishermanId ? 'Loading…' : '—';
-      if (selectedFishermanId) {
+      function loadManageDropoffs() {
+        const fishermanId = (selectedFishermanId || '').toString().trim();
+        const info = document.getElementById('manageDropsInfo');
+        const list = document.getElementById('manageDropsList');
+        if (!info || !list) return;
+
+        if (!fishermanId) {
+          info.innerText = 'Select a fisherman first.';
+          list.innerHTML = '';
+          return;
+        }
+
+        info.innerText = 'Loading...';
+        list.innerHTML = '';
+
+        google.script.run
+          .withSuccessHandler(rows => {
+            list.innerHTML = '';
+            if (!rows || rows.length === 0) {
+              info.innerText = 'No editable drop-offs found.';
+              return;
+            }
+            info.innerText = '';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'table-wrap';
+            const table = document.createElement('table');
+            table.innerHTML =
+              '<thead>' +
+              '<tr>' +
+              '<th>Drop ID</th>' +
+              '<th>Date</th>' +
+              '<th>Weight (kg)</th>' +
+              '<th>Purity</th>' +
+              '<th>Inspector</th>' +
+              '<th>Notes</th>' +
+              '<th class="actions">Actions</th>' +
+              '</tr>' +
+              '</thead>' +
+              '<tbody></tbody>';
+
+            const tbody = table.querySelector('tbody');
+
+            function mkTd(text, className) {
+              const td = document.createElement('td');
+              if (className) td.className = className;
+              td.textContent = text || '';
+              return td;
+            }
+
+            function refreshRowFromData(tr, d) {
+              const cells = tr.querySelectorAll('td');
+              if (cells.length < 7) return;
+              cells[0].textContent = (d.dropId || '');
+              cells[1].textContent = (d.date || '');
+              cells[2].textContent = formatKg(d.netWeightKg || 0);
+              cells[3].textContent = (d.purity || '');
+              cells[4].textContent = (d.inspector || '');
+              cells[5].textContent = (d.notes || '');
+            }
+
+            rows.forEach(d => {
+              const tr = document.createElement('tr');
+              tr.appendChild(mkTd(d.dropId || ''));
+              tr.appendChild(mkTd(d.date || '', 'cell-muted'));
+              tr.appendChild(mkTd(formatKg(d.netWeightKg || 0)));
+              tr.appendChild(mkTd(d.purity || ''));
+              tr.appendChild(mkTd(d.inspector || ''));
+              tr.appendChild(mkTd(d.notes || ''));
+
+              const tdActions = document.createElement('td');
+              tdActions.className = 'actions';
+              const btnEdit = document.createElement('button');
+              btnEdit.className = 'secondary action-btn';
+              btnEdit.textContent = 'Edit';
+              const btnDelete = document.createElement('button');
+              btnDelete.className = 'danger action-btn';
+              btnDelete.style.marginLeft = '6px';
+              btnDelete.textContent = 'Delete';
+              const statusEl = document.createElement('div');
+              statusEl.className = 'muted small';
+              statusEl.style.marginTop = '6px';
+              tdActions.appendChild(btnEdit);
+              tdActions.appendChild(btnDelete);
+              tdActions.appendChild(statusEl);
+              tr.appendChild(tdActions);
+
+              let isEditing = false;
+              let original = null;
+
+              function enterEdit() {
+                if (isEditing) return;
+                isEditing = true;
+                statusEl.textContent = '';
+                btnEdit.textContent = 'Cancel';
+
+                original = {
+                  netWeightKg: d.netWeightKg,
+                  purity: d.purity,
+                  inspector: d.inspector,
+                  notes: d.notes
+                };
+
+                const weightTd = tr.children[2];
+                const purityTd = tr.children[3];
+                const inspectorTd = tr.children[4];
+                const notesTd = tr.children[5];
+
+                weightTd.innerHTML = '';
+                purityTd.innerHTML = '';
+                inspectorTd.innerHTML = '';
+                notesTd.innerHTML = '';
+
+                const w = document.createElement('input');
+                w.className = 'inline-input';
+                w.inputMode = 'numeric';
+                w.pattern = '[0-9]*';
+                w.value = String(Math.round((parseFloat(d.netWeightKg) || 0))).replace(/\D+/g, '');
+                w.addEventListener('input', () => {
+                  const v = (w.value || '').toString();
+                  const cleaned = v.replace(/\D+/g, '');
+                  if (v !== cleaned) w.value = cleaned;
+                });
+
+                const p = document.createElement('select');
+                p.className = 'inline-input';
+                ['Clean', 'Partial', 'Unclean'].forEach(optVal => {
+                  const opt = document.createElement('option');
+                  opt.value = optVal;
+                  opt.textContent = optVal;
+                  p.appendChild(opt);
+                });
+                p.value = (d.purity || 'Clean');
+
+                const i = document.createElement('input');
+                i.className = 'inline-input';
+                i.value = (d.inspector || '').toString();
+
+                const n = document.createElement('input');
+                n.className = 'inline-input';
+                n.value = (d.notes || '').toString();
+
+                weightTd.appendChild(w);
+                purityTd.appendChild(p);
+                inspectorTd.appendChild(i);
+                notesTd.appendChild(n);
+
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'submit-btn action-btn';
+                saveBtn.style.marginLeft = '6px';
+                saveBtn.textContent = 'Save';
+                tdActions.insertBefore(saveBtn, statusEl);
+
+                saveBtn.onclick = () => {
+                  saveBtn.disabled = true;
+                  btnDelete.disabled = true;
+                  statusEl.textContent = 'Saving…';
+
+                  const payload = {
+                    dropId: d.dropId,
+                    netWeightKg: (w && w.value) ? w.value : '',
+                    purity: (p && p.value) ? p.value : 'Clean',
+                    inspector: (i && i.value) ? i.value : '',
+                    notes: (n && n.value) ? n.value : ''
+                  };
+
+                  google.script.run
+                    .withSuccessHandler(() => {
+                      // local update for immediate UI, server will fully reallocate anyway
+                      d.netWeightKg = parseFloat(payload.netWeightKg) || d.netWeightKg;
+                      d.purity = payload.purity;
+                      d.inspector = payload.inspector;
+                      d.notes = payload.notes;
+                      statusEl.textContent = 'Saved.';
+                      exitEdit(true);
+                      refreshAfterDropMutation();
+                    })
+                    .withFailureHandler(err => {
+                      saveBtn.disabled = false;
+                      btnDelete.disabled = false;
+                      statusEl.textContent = 'Error: ' + (err && err.message ? err.message : err);
+                    })
+                    .updateDropoffById(payload);
+                };
+
+                tr._saveBtn = saveBtn;
+              }
+
+              function exitEdit(revert) {
+                if (!isEditing) return;
+                isEditing = false;
+                btnEdit.textContent = 'Edit';
+                btnDelete.disabled = false;
+                if (tr._saveBtn) {
+                  try { tr._saveBtn.remove(); } catch (e) { }
+                  tr._saveBtn = null;
+                }
+                if (revert && original) {
+                  d.netWeightKg = original.netWeightKg;
+                  d.purity = original.purity;
+                  d.inspector = original.inspector;
+                  d.notes = original.notes;
+                }
+                refreshRowFromData(tr, d);
+              }
+
+              btnEdit.onclick = () => {
+                if (isEditing) {
+                  exitEdit(true);
+                } else {
+                  enterEdit();
+                }
+              };
+
+              btnDelete.onclick = () => {
+                if (!confirm('Delete drop-off ' + (d.dropId || '') + '? This will recalculate due/accumulating payments.')) return;
+                btnDelete.disabled = true;
+                btnEdit.disabled = true;
+                statusEl.textContent = '';
+                google.script.run
+                  .withSuccessHandler(() => {
+                    statusEl.textContent = 'Deleted.';
+                    refreshAfterDropMutation();
+                  })
+                  .withFailureHandler(err => {
+                    btnDelete.disabled = false;
+                    btnEdit.disabled = false;
+                    alert('Error: ' + (err.message || err));
+                  })
+                  .deleteDropoffById({ dropId: d.dropId });
+              };
+
+              tbody.appendChild(tr);
+            });
+
+            wrap.appendChild(table);
+            list.appendChild(wrap);
+          })
+          .withFailureHandler(err => {
+            info.innerText = '';
+            list.innerHTML = '';
+            alert('Error: ' + (err.message || err));
+          })
+          .getEditableDropoffsByFishermanId(fishermanId);
+      }
+
+      function refreshAfterDropMutation() {
+        // Reevaluation happens server-side; refresh all dependent UI.
+        loadPaymentExplorer();
+        loadVolunteerContribution();
+        try { selectFisherman(lastSelectedFisherman || { personId: selectedFishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
+        loadManageDropoffs();
+      }
+
+      function attachDropWeightDigitsOnly() {
+        const el = document.getElementById('dropWeight');
+        if (!el) return;
+        el.addEventListener('input', () => {
+          const v = (el.value || '').toString();
+          const cleaned = v.replace(/\D+/g, '');
+          if (v !== cleaned) el.value = cleaned;
+        });
+      }
+
+      function openRegisterModal({ prefillName }) {
+        if (modalCloseTimer) {
+          clearTimeout(modalCloseTimer);
+          modalCloseTimer = null;
+        }
+        document.getElementById('mRegName').value = (prefillName || '').toString();
+        document.getElementById('mRegPhone').value = '';
+        document.getElementById('mRegVillage').value = '';
+        document.getElementById('mRegResult').innerText = '';
+        const submit = document.getElementById('mRegSubmit');
+        submit.disabled = false;
+        submit.textContent = 'Create & Use';
+        document.getElementById('modalBackdrop').style.display = 'flex';
+      }
+
+      function closeModal() {
+        if (modalCloseTimer) {
+          clearTimeout(modalCloseTimer);
+          modalCloseTimer = null;
+        }
+        document.getElementById('modalBackdrop').style.display = 'none';
+        document.getElementById('mRegResult').innerText = '';
+      }
+
+      function openPaymentModal(p) {
+        pendingPaymentConfirm = p || null;
+        document.getElementById('mPayResult').innerText = '';
+        document.getElementById('mPayId').innerText = (p && p.paymentId) ? p.paymentId : '—';
+        document.getElementById('mPayFisherman').innerText = (p && p.fishermanName) ? p.fishermanName : '(Unknown)';
+        document.getElementById('mPayWeight').innerText = (p && typeof p.accumulatedKg !== 'undefined') ? (formatKg(p.accumulatedKg) + ' kg') : '—';
+        const amountText = (p && p.payloadRM !== '' && p.payloadRM != null) ? (p.payloadRM + ' RM') : '—';
+        document.getElementById('mPayAmount').innerText = amountText;
+
+        const confirmBtn = document.getElementById('mPayConfirm');
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Confirm payment';
+        }
+
+        const cancelBtn = document.getElementById('mPayCancel');
+        if (cancelBtn) {
+          cancelBtn.style.display = '';
+          cancelBtn.disabled = false;
+        }
+        document.getElementById('paymentModalBackdrop').style.display = 'flex';
+      }
+
+      function closePaymentModal() {
+        pendingPaymentConfirm = null;
+        document.getElementById('paymentModalBackdrop').style.display = 'none';
+        document.getElementById('mPayResult').innerText = '';
+      }
+
+      function confirmPaymentFromModal() {
+        if (!pendingPaymentConfirm || !pendingPaymentConfirm.paymentId) return alert('Payment ID missing');
+        const confirmBtn = document.getElementById('mPayConfirm');
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Confirming…';
+        }
+
+        const cancelBtn = document.getElementById('mPayCancel');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        document.getElementById('mPayResult').innerText = '';
+
+        google.script.run
+          .withSuccessHandler(() => {
+            document.getElementById('mPayResult').innerText = 'Paid.';
+            closePaymentModal();
+            loadPaymentExplorer();
+          })
+          .withFailureHandler(err => {
+            if (confirmBtn) {
+              confirmBtn.disabled = false;
+              confirmBtn.textContent = 'Confirm payment';
+            }
+            if (cancelBtn) cancelBtn.style.display = '';
+            document.getElementById('mPayResult').innerText = 'Error: ' + (err && err.message ? err.message : err);
+          })
+          .confirmPayment(pendingPaymentConfirm.paymentId);
+      }
+
+      function registerFromModal() {
+        const fullName = titleCaseInput(document.getElementById('mRegName').value);
+        const phone = normalizeSpaces(document.getElementById('mRegPhone').value);
+        const village = titleCaseInput(document.getElementById('mRegVillage').value);
+        if (!fullName) return alert('Name required');
+
+        const submit = document.getElementById('mRegSubmit');
+        submit.disabled = true;
+        submit.textContent = 'Creating…';
+
+        // Close the modal shortly after click (do not wait for success)
+        if (modalCloseTimer) clearTimeout(modalCloseTimer);
+        modalCloseTimer = setTimeout(() => {
+          closeModal();
+        }, 2000);
+
+        onSuccessAsync(res => {
+          // keep local typeahead list up to date + select the new fisherman
+          try {
+            const newF = {
+              personId: (res.personId || '').toString(),
+              fullName: (res.fullName || fullName || '').toString(),
+              phone: (res.phone || phone || '').toString(),
+              village: (res.village || village || '').toString(),
+              registryDate: res.registryDate || ''
+            };
+            if (newF.personId) {
+              const exists = fishermenCache.some(f => (f.personId + '') === (newF.personId + ''));
+              if (!exists) fishermenCache.unshift(newF);
+              fishermenLoaded = true;
+            }
+
+            // select the newly created fisherman
+            selectFisherman(newF);
+            const q = document.getElementById('searchQ');
+            if (q) q.value = newF.fullName || '';
+          } catch (e) { }
+
+          // refresh full list used by typeahead
+          refreshFishermenCacheSilently();
+
+          loadPaymentExplorer();
+        }).registerFisherman({ fullName, phone, village });
+      }
+
+      function loadFishermenCache() {
+        fishermenLoaded = false;
+        onSuccessAsync(list => {
+          if (!Array.isArray(list)) {
+            fishermenCache = [];
+            fishermenLoaded = false;
+            try { console.error('getFishermen unexpected payload:', list); } catch (e) { }
+            return;
+          }
+          fishermenCache = list;
+          fishermenLoaded = true;
+        }).getFishermen();
+      }
+
+      function refreshFishermenCacheSilently() {
+        onSuccessAsync(list => {
+          if (!Array.isArray(list)) return;
+          fishermenCache = list;
+          fishermenLoaded = true;
+        }).getFishermen();
+      }
+
+      function attachTypeaheadHandlers() {
+        const input = document.getElementById('searchQ');
+        if (!input) return;
+        input.addEventListener('input', () => {
+          const q = input.value;
+          const list = filterFishermen(q, 50);
+          renderTypeahead(list, q);
+        });
+        input.addEventListener('focus', () => {
+          const q = input.value;
+          const list = filterFishermen(q, 50);
+          renderTypeahead(list, q);
+        });
+        input.addEventListener('blur', () => {
+          if (typeaheadHideTimer) clearTimeout(typeaheadHideTimer);
+          typeaheadHideTimer = setTimeout(() => hideTypeahead(), 120);
+        });
+      }
+
+      function loadPaymentExplorer() {
+        loadDuePayments();
+        loadPaidPayments();
+      }
+
+      function loadDuePayments() {
+        const info = document.getElementById('dueInfo');
+        const list = document.getElementById('dueList');
+        info.innerText = 'Loading...';
+        list.innerHTML = '';
+
+        onSuccessAsync(rows => {
+          list.innerHTML = '';
+          if (!rows || rows.length === 0) {
+            info.innerText = 'No payments due.';
+            return;
+          }
+          info.innerText = '';
+
+          rows.forEach(p => {
+            const d = document.createElement('div');
+            d.className = 'list-item compact';
+            d.style.cursor = 'default';
+
+            const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
+            const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
+            const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
+            const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
+
+            d.innerHTML =
+              '<div class="flex">' +
+              '<div><b>' + name + '</b><span class="muted">' + phone + '</span></div>' +
+              '<div class="right" style="text-align:right">' +
+              payloadBlock +
+              '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
+              '</div>' +
+              '</div>' +
+              '<div class="small muted">' +
+              (p.fishermanVillage ? ('Village: ' + escapeHtml(p.fishermanVillage) + ' • ') : '') +
+              'Payment: ' + escapeHtml(p.paymentId || '') +
+              '</div>' +
+              '<div class="flex" style="margin-top:6px">' +
+              '<button class="danger" data-confirm-payment="' + escapeHtml(p.paymentId) + '">Confirm payment</button>' +
+              '<div class="right muted small" data-confirm-result></div>' +
+              '</div>';
+
+            const confirmBtn = d.querySelector('button[data-confirm-payment]');
+            const confirmResult = d.querySelector('[data-confirm-result]');
+            confirmBtn.onclick = () => {
+              // Require explicit confirmation in modal (restates key financial details)
+              openPaymentModal(p);
+            };
+
+            list.appendChild(d);
+          });
+        }).getDuePayments();
+      }
+
+      function loadPaidPayments() {
+        const info = document.getElementById('paidInfo');
+        const list = document.getElementById('paidList');
+        info.innerText = 'Loading...';
+        list.innerHTML = '';
+
+        onSuccessAsync(rows => {
+          list.innerHTML = '';
+
+          // Month label + next button state (similar to volunteer panel)
+          try {
+            const d = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth(), 1);
+            document.getElementById('paidMonthLabel').innerText = d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+          } catch (e) {
+            document.getElementById('paidMonthLabel').innerText = 'Selected month';
+          }
+          try {
+            const cur = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+            const isCurrentMonth = (paidMonthCursor.getFullYear() === cur.getFullYear() && paidMonthCursor.getMonth() === cur.getMonth());
+            document.getElementById('paidNext').disabled = !!isCurrentMonth;
+          } catch (e) { }
+
+          if (!rows || rows.length === 0) {
+            info.innerText = 'No paid payments yet.';
+            return;
+          }
+          info.innerText = '';
+
+          const cursorKey = monthKeyFromDate(paidMonthCursor);
+          const monthRows = rows.filter(p => monthKeyFromDate(parseDMYDateTime(p.date)) === cursorKey);
+          if (monthRows.length === 0) {
+            info.innerText = 'No paid payments for this month.';
+            return;
+          }
+
+          monthRows.forEach(p => {
+            const d = document.createElement('div');
+            d.className = 'list-item';
+            d.style.cursor = 'default';
+
+            const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
+            const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
+            const when = p.date ? escapeHtml(formatPaymentExplorerDateTime(p.date)) : '';
+
+            const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
+            const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
+
+            d.innerHTML =
+              '<div class="flex">' +
+              '<div><b>' + name + '</b><span class="muted">' + phone + '</span></div>' +
+              '<div class="right" style="text-align:right">' +
+              payloadBlock +
+              '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
+              '</div>' +
+              '</div>' +
+              '<div class="small muted">' + (when ? when : '') + '</div>' +
+              '<div class="small muted">Payment: ' + escapeHtml(p.paymentId || '') + ' • Fisherman ID: ' + escapeHtml(p.fishermanId || '') + '</div>' +
+              '<div class="flex" style="margin-top:8px">' +
+              '<button class="disclosure-btn" data-audit-payment="' + escapeHtml(p.paymentId) + '">&gt; View drop-offs</button>' +
+              '<div class="right muted small" data-audit-status></div>' +
+              '</div>' +
+              '<div class="small" data-audit-panel style="margin-top:8px;display:none"></div>';
+
+            const btn = d.querySelector('button[data-audit-payment]');
+            const statusEl = d.querySelector('[data-audit-status]');
+            const panel = d.querySelector('[data-audit-panel]');
+
+            btn.onclick = () => {
+              const isVisible = panel.style.display !== 'none';
+              if (isVisible) {
+                panel.style.display = 'none';
+                btn.textContent = '> View drop-offs';
+                statusEl.innerText = '';
+                return;
+              }
+
+              btn.disabled = true;
+              const prev = btn.textContent;
+              btn.textContent = 'Loading…';
+              statusEl.innerText = '';
+
+              google.script.run
+                .withSuccessHandler(drops => {
+                  btn.disabled = false;
+                  btn.textContent = 'v Hide drop-offs';
+                  panel.style.display = 'block';
+
+                  if (!drops || drops.length === 0) {
+                    panel.innerHTML = '<div class="muted">No drop-offs tagged with this payment.</div>';
+                    return;
+                  }
+
+                  const lines = drops.map(x => {
+                    const date = x.date ? escapeHtml(x.date) : '';
+                    const w = formatKg(x.netWeightKg || 0) + ' kg';
+                    const purity = x.purity ? escapeHtml(x.purity) : '';
+                    const inspector = x.inspector ? escapeHtml(x.inspector) : '';
+                    const notes = x.notes ? escapeHtml(x.notes) : '';
+                    const parts = [];
+                    if (date) parts.push(date);
+                    parts.push(w);
+                    if (purity) parts.push('Purity: ' + purity);
+                    if (inspector) parts.push('Inspector: ' + inspector);
+                    if (notes) parts.push('Notes: ' + notes);
+                    const dropId = x.dropId ? escapeHtml(x.dropId) : '';
+                    return '<div style="padding:8px;border:1px solid #e6e6e6;border-radius:8px;margin-top:6px;background:#fff">' +
+                      '<div><b>' + dropId + '</b></div>' +
+                      '<div class="small">' + parts.join(' • ') + '</div>' +
+                      '</div>';
+                  });
+                  panel.innerHTML = lines.join('');
+                })
+                .withFailureHandler(err => {
+                  btn.disabled = false;
+                  btn.textContent = prev;
+                  alert('Error: ' + (err.message || err));
+                })
+                .getDropoffsByPaymentId(p.paymentId);
+            };
+
+            list.appendChild(d);
+          });
+        }).getPaidPayments();
+      }
+
+      function paidPrevMonth() {
+        paidMonthCursor = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth() - 1, 1);
+        loadPaidPayments();
+      }
+
+      function paidNextMonth() {
+        paidMonthCursor = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth() + 1, 1);
+        loadPaidPayments();
+      }
+
+      function getSelectedDropPurity() {
+        const el = document.querySelector('input[name="dropPurity"]:checked');
+        return el ? el.value : 'Clean';
+      }
+
+
+      function logDrop() {
+        const fishermanId = (selectedFishermanId || '').toString().trim();
+        const weightStr = (document.getElementById('dropWeight').value || '').toString().replace(/\D+/g, '');
+        const netWeight = parseInt(weightStr, 10);
+        if (!fishermanId) return alert('Fisherman ID required');
+        if (!netWeight || netWeight <= 0) return alert('Weight must be > 0');
+        const purity = getSelectedDropPurity();
+        const inspector = titleCaseInput((document.getElementById('dropInspector').value || '').toString());
+        if (!inspector) return alert('Inspector is required');
+        const notes = document.getElementById('dropNotes').value;
+
+        const submitBtn = document.getElementById('dropSubmitBtn');
+        const prevText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Submitting…';
+        }
+
         google.script.run
           .withSuccessHandler(res => {
-            const kg = res && typeof res.accumulatingKg !== 'undefined' ? res.accumulatingKg : 0;
-            if (accumulatingEl) {
-              const threshold = activeDealCache && activeDealCache.data ? (parseFloat(activeDealCache.data.thresholdKg) || 0) : 0;
-              if (!threshold) {
-                accumulatingEl.innerText = '—';
-              } else {
-                const remaining = Math.max(0, (threshold || 0) - (parseFloat(kg) || 0));
-                accumulatingEl.innerText = formatKg(remaining) + ' kg';
-              }
+            const r = res.allocationResult || res;
+            document.getElementById('dropWeight').value = ''; document.getElementById('dropNotes').value = '';
+            loadPaymentExplorer();
+            loadVolunteerContribution();
+            // refresh accumulating display after allocation
+            try { selectFisherman(lastSelectedFisherman || { personId: fishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
+
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = prevText || 'Submit';
             }
           })
           .withFailureHandler(err => {
-            if (accumulatingEl) accumulatingEl.innerText = '—';
-            try { console.error(err); } catch (e) { }
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = prevText || 'Submit';
+            }
+            alert('Error: ' + (err.message || err));
           })
-          .getAccumulatingPaymentSummary(selectedFishermanId);
+          .logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes });
       }
 
-      setAdmitVisible(!!selectedFishermanId);
+      function clearDropForm() {
+        selectedFishermanId = '';
+        lastSelectedFisherman = null;
 
-      // Keep manage tab list in sync when switching fishermen.
-      if (selectedFishermanId) {
-        loadManageDropoffs();
-      } else {
+        const idText = document.getElementById('dropFishermanIdText');
+        if (idText) idText.innerText = '—';
+        const nameEl = document.getElementById('dropFishermanName');
+        if (nameEl) nameEl.innerText = 'None selected';
+        const accumulatingEl = document.getElementById('dropAccumulatingWeight');
+        if (accumulatingEl) accumulatingEl.innerText = '—';
+
+        document.getElementById('dropWeight').value = '';
+        document.getElementById('dropInspector').value = '';
+        document.getElementById('dropNotes').value = '';
+
+        const clean = document.querySelector('input[name="dropPurity"][value="Clean"]');
+        if (clean) clean.checked = true;
+        setAdmitVisible(false);
+
         try {
           document.getElementById('manageDropsInfo').innerText = '';
           document.getElementById('manageDropsList').innerHTML = '';
         } catch (e) { }
       }
-    }
 
-    function loadManageDropoffs() {
-      const fishermanId = (selectedFishermanId || '').toString().trim();
-      const info = document.getElementById('manageDropsInfo');
-      const list = document.getElementById('manageDropsList');
-      if (!info || !list) return;
+      function loadVolunteerContribution() {
+        const y = volMonthCursor.getFullYear();
+        const m = volMonthCursor.getMonth() + 1;
+        document.getElementById('volMonthLabel').innerText = 'Loading...';
+        document.getElementById('volSummary').innerText = '';
+        document.getElementById('volList').innerHTML = '';
 
-      if (!fishermanId) {
-        info.innerText = 'Select a fisherman first.';
-        list.innerHTML = '';
-        return;
-      }
+        onSuccessAsync(res => {
+          document.getElementById('volMonthLabel').innerText = res.monthLabel;
+          document.getElementById('volSummary').innerText =
+            'Total: ' + (res.totalKg || 0) + ' kg' +
+            ' (Clean ' + (res.totalCleanKg || 0) + ', Partial ' + (res.totalPartialKg || 0) + ', Unclean ' + (res.totalUncleanKg || 0) + ')';
 
-      info.innerText = 'Loading...';
-      list.innerHTML = '';
+          const nextBtn = document.getElementById('volNext');
+          nextBtn.disabled = !!res.isCurrentMonth;
 
-      google.script.run
-        .withSuccessHandler(rows => {
-          list.innerHTML = '';
-          if (!rows || rows.length === 0) {
-            info.innerText = 'No editable drop-offs found.';
+          const list = document.getElementById('volList');
+          if (!res.items || res.items.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'muted small';
+            empty.innerText = 'No drop-offs logged for this month.';
+            list.appendChild(empty);
             return;
           }
-          info.innerText = '';
 
-          const wrap = document.createElement('div');
-          wrap.className = 'table-wrap';
-          const table = document.createElement('table');
-          table.innerHTML =
-            '<thead>' +
-            '<tr>' +
-            '<th>Drop ID</th>' +
-            '<th>Date</th>' +
-            '<th>Weight (kg)</th>' +
-            '<th>Purity</th>' +
-            '<th>Inspector</th>' +
-            '<th>Notes</th>' +
-            '<th class="actions">Actions</th>' +
-            '</tr>' +
-            '</thead>' +
-            '<tbody></tbody>';
-
-          const tbody = table.querySelector('tbody');
-
-          function mkTd(text, className) {
-            const td = document.createElement('td');
-            if (className) td.className = className;
-            td.textContent = text || '';
-            return td;
-          }
-
-          function refreshRowFromData(tr, d) {
-            const cells = tr.querySelectorAll('td');
-            if (cells.length < 7) return;
-            cells[0].textContent = (d.dropId || '');
-            cells[1].textContent = (d.date || '');
-            cells[2].textContent = formatKg(d.netWeightKg || 0);
-            cells[3].textContent = (d.purity || '');
-            cells[4].textContent = (d.inspector || '');
-            cells[5].textContent = (d.notes || '');
-          }
-
-          rows.forEach(d => {
-            const tr = document.createElement('tr');
-            tr.appendChild(mkTd(d.dropId || ''));
-            tr.appendChild(mkTd(d.date || '', 'cell-muted'));
-            tr.appendChild(mkTd(formatKg(d.netWeightKg || 0)));
-            tr.appendChild(mkTd(d.purity || ''));
-            tr.appendChild(mkTd(d.inspector || ''));
-            tr.appendChild(mkTd(d.notes || ''));
-
-            const tdActions = document.createElement('td');
-            tdActions.className = 'actions';
-            const btnEdit = document.createElement('button');
-            btnEdit.className = 'secondary action-btn';
-            btnEdit.textContent = 'Edit';
-            const btnDelete = document.createElement('button');
-            btnDelete.className = 'danger action-btn';
-            btnDelete.style.marginLeft = '6px';
-            btnDelete.textContent = 'Delete';
-            const statusEl = document.createElement('div');
-            statusEl.className = 'muted small';
-            statusEl.style.marginTop = '6px';
-            tdActions.appendChild(btnEdit);
-            tdActions.appendChild(btnDelete);
-            tdActions.appendChild(statusEl);
-            tr.appendChild(tdActions);
-
-            let isEditing = false;
-            let original = null;
-
-            function enterEdit() {
-              if (isEditing) return;
-              isEditing = true;
-              statusEl.textContent = '';
-              btnEdit.textContent = 'Cancel';
-
-              original = {
-                netWeightKg: d.netWeightKg,
-                purity: d.purity,
-                inspector: d.inspector,
-                notes: d.notes
-              };
-
-              const weightTd = tr.children[2];
-              const purityTd = tr.children[3];
-              const inspectorTd = tr.children[4];
-              const notesTd = tr.children[5];
-
-              weightTd.innerHTML = '';
-              purityTd.innerHTML = '';
-              inspectorTd.innerHTML = '';
-              notesTd.innerHTML = '';
-
-              const w = document.createElement('input');
-              w.className = 'inline-input';
-              w.inputMode = 'numeric';
-              w.pattern = '[0-9]*';
-              w.value = String(Math.round((parseFloat(d.netWeightKg) || 0))).replace(/\D+/g, '');
-              w.addEventListener('input', () => {
-                const v = (w.value || '').toString();
-                const cleaned = v.replace(/\D+/g, '');
-                if (v !== cleaned) w.value = cleaned;
-              });
-
-              const p = document.createElement('select');
-              p.className = 'inline-input';
-              ['Clean', 'Partial', 'Unclean'].forEach(optVal => {
-                const opt = document.createElement('option');
-                opt.value = optVal;
-                opt.textContent = optVal;
-                p.appendChild(opt);
-              });
-              p.value = (d.purity || 'Clean');
-
-              const i = document.createElement('input');
-              i.className = 'inline-input';
-              i.value = (d.inspector || '').toString();
-
-              const n = document.createElement('input');
-              n.className = 'inline-input';
-              n.value = (d.notes || '').toString();
-
-              weightTd.appendChild(w);
-              purityTd.appendChild(p);
-              inspectorTd.appendChild(i);
-              notesTd.appendChild(n);
-
-              const saveBtn = document.createElement('button');
-              saveBtn.className = 'submit-btn action-btn';
-              saveBtn.style.marginLeft = '6px';
-              saveBtn.textContent = 'Save';
-              tdActions.insertBefore(saveBtn, statusEl);
-
-              saveBtn.onclick = () => {
-                saveBtn.disabled = true;
-                btnDelete.disabled = true;
-                statusEl.textContent = 'Saving…';
-
-                const payload = {
-                  dropId: d.dropId,
-                  netWeightKg: (w && w.value) ? w.value : '',
-                  purity: (p && p.value) ? p.value : 'Clean',
-                  inspector: (i && i.value) ? i.value : '',
-                  notes: (n && n.value) ? n.value : ''
-                };
-
-                google.script.run
-                  .withSuccessHandler(() => {
-                    // local update for immediate UI, server will fully reallocate anyway
-                    d.netWeightKg = parseFloat(payload.netWeightKg) || d.netWeightKg;
-                    d.purity = payload.purity;
-                    d.inspector = payload.inspector;
-                    d.notes = payload.notes;
-                    statusEl.textContent = 'Saved.';
-                    exitEdit(true);
-                    refreshAfterDropMutation();
-                  })
-                  .withFailureHandler(err => {
-                    saveBtn.disabled = false;
-                    btnDelete.disabled = false;
-                    statusEl.textContent = 'Error: ' + (err && err.message ? err.message : err);
-                  })
-                  .updateDropoffById(payload);
-              };
-
-              tr._saveBtn = saveBtn;
-            }
-
-            function exitEdit(revert) {
-              if (!isEditing) return;
-              isEditing = false;
-              btnEdit.textContent = 'Edit';
-              btnDelete.disabled = false;
-              if (tr._saveBtn) {
-                try { tr._saveBtn.remove(); } catch (e) { }
-                tr._saveBtn = null;
-              }
-              if (revert && original) {
-                d.netWeightKg = original.netWeightKg;
-                d.purity = original.purity;
-                d.inspector = original.inspector;
-                d.notes = original.notes;
-              }
-              refreshRowFromData(tr, d);
-            }
-
-            btnEdit.onclick = () => {
-              if (isEditing) {
-                exitEdit(true);
-              } else {
-                enterEdit();
-              }
-            };
-
-            btnDelete.onclick = () => {
-              if (!confirm('Delete drop-off ' + (d.dropId || '') + '? This will recalculate due/accumulating payments.')) return;
-              btnDelete.disabled = true;
-              btnEdit.disabled = true;
-              statusEl.textContent = '';
-              google.script.run
-                .withSuccessHandler(() => {
-                  statusEl.textContent = 'Deleted.';
-                  refreshAfterDropMutation();
-                })
-                .withFailureHandler(err => {
-                  btnDelete.disabled = false;
-                  btnEdit.disabled = false;
-                  alert('Error: ' + (err.message || err));
-                })
-                .deleteDropoffById({ dropId: d.dropId });
-            };
-
-            tbody.appendChild(tr);
+          res.items.forEach(it => {
+            const row = document.createElement('div');
+            row.className = 'list-item';
+            row.style.cursor = 'default';
+            row.innerHTML =
+              '<div class="flex">' +
+              '<div><b>' + escapeHtml(it.inspector) + '</b></div>' +
+              '<div class="right"><b>' + (it.totalKg || 0) + ' kg</b></div>' +
+              '</div>' +
+              '<div class="small muted">Clean ' + (it.cleanKg || 0) + ' • Partial ' + (it.partialKg || 0) + ' • Unclean ' + (it.uncleanKg || 0) + '</div>';
+            list.appendChild(row);
           });
+        }).getVolunteerContributionMonth({ year: y, month: m });
+      }
 
-          wrap.appendChild(table);
-          list.appendChild(wrap);
-        })
-        .withFailureHandler(err => {
-          info.innerText = '';
-          list.innerHTML = '';
-          alert('Error: ' + (err.message || err));
-        })
-        .getEditableDropoffsByFishermanId(fishermanId);
-    }
+      function volPrevMonth() {
+        volMonthCursor = new Date(volMonthCursor.getFullYear(), volMonthCursor.getMonth() - 1, 1);
+        loadVolunteerContribution();
+      }
 
-    function refreshAfterDropMutation() {
-      // Reevaluation happens server-side; refresh all dependent UI.
+      function volNextMonth() {
+        volMonthCursor = new Date(volMonthCursor.getFullYear(), volMonthCursor.getMonth() + 1, 1);
+        loadVolunteerContribution();
+      }
+
+      // init
+      loadActiveDeal();
+      loadFishermenCache();
+      attachTypeaheadHandlers();
+      attachDropWeightDigitsOnly();
+      loadVolunteerContribution();
       loadPaymentExplorer();
-      loadVolunteerContribution();
-      try { selectFisherman(lastSelectedFisherman || { personId: selectedFishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
-      loadManageDropoffs();
-    }
-
-    function attachDropWeightDigitsOnly() {
-      const el = document.getElementById('dropWeight');
-      if (!el) return;
-      el.addEventListener('input', () => {
-        const v = (el.value || '').toString();
-        const cleaned = v.replace(/\D+/g, '');
-        if (v !== cleaned) el.value = cleaned;
-      });
-    }
-
-    function openRegisterModal({ prefillName }) {
-      if (modalCloseTimer) {
-        clearTimeout(modalCloseTimer);
-        modalCloseTimer = null;
-      }
-      document.getElementById('mRegName').value = (prefillName || '').toString();
-      document.getElementById('mRegPhone').value = '';
-      document.getElementById('mRegVillage').value = '';
-      document.getElementById('mRegResult').innerText = '';
-      const submit = document.getElementById('mRegSubmit');
-      submit.disabled = false;
-      submit.textContent = 'Create & Use';
-      document.getElementById('modalBackdrop').style.display = 'flex';
-    }
-
-    function closeModal() {
-      if (modalCloseTimer) {
-        clearTimeout(modalCloseTimer);
-        modalCloseTimer = null;
-      }
-      document.getElementById('modalBackdrop').style.display = 'none';
-      document.getElementById('mRegResult').innerText = '';
-    }
-
-    function openPaymentModal(p) {
-      pendingPaymentConfirm = p || null;
-      document.getElementById('mPayResult').innerText = '';
-      document.getElementById('mPayId').innerText = (p && p.paymentId) ? p.paymentId : '—';
-      document.getElementById('mPayFisherman').innerText = (p && p.fishermanName) ? p.fishermanName : '(Unknown)';
-      document.getElementById('mPayWeight').innerText = (p && typeof p.accumulatedKg !== 'undefined') ? (formatKg(p.accumulatedKg) + ' kg') : '—';
-      const amountText = (p && p.payloadRM !== '' && p.payloadRM != null) ? (p.payloadRM + ' RM') : '—';
-      document.getElementById('mPayAmount').innerText = amountText;
-
-      const confirmBtn = document.getElementById('mPayConfirm');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirm payment';
-      }
-
-      const cancelBtn = document.getElementById('mPayCancel');
-      if (cancelBtn) {
-        cancelBtn.style.display = '';
-        cancelBtn.disabled = false;
-      }
-      document.getElementById('paymentModalBackdrop').style.display = 'flex';
-    }
-
-    function closePaymentModal() {
-      pendingPaymentConfirm = null;
-      document.getElementById('paymentModalBackdrop').style.display = 'none';
-      document.getElementById('mPayResult').innerText = '';
-    }
-
-    function confirmPaymentFromModal() {
-      if (!pendingPaymentConfirm || !pendingPaymentConfirm.paymentId) return alert('Payment ID missing');
-      const confirmBtn = document.getElementById('mPayConfirm');
-      if (confirmBtn) {
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = 'Confirming…';
-      }
-
-      const cancelBtn = document.getElementById('mPayCancel');
-      if (cancelBtn) cancelBtn.style.display = 'none';
-      document.getElementById('mPayResult').innerText = '';
-
-      google.script.run
-        .withSuccessHandler(() => {
-          document.getElementById('mPayResult').innerText = 'Paid.';
-          closePaymentModal();
-          loadPaymentExplorer();
-        })
-        .withFailureHandler(err => {
-          if (confirmBtn) {
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = 'Confirm payment';
-          }
-          if (cancelBtn) cancelBtn.style.display = '';
-          document.getElementById('mPayResult').innerText = 'Error: ' + (err && err.message ? err.message : err);
-        })
-        .confirmPayment(pendingPaymentConfirm.paymentId);
-    }
-
-    function registerFromModal() {
-      const fullName = titleCaseInput(document.getElementById('mRegName').value);
-      const phone = normalizeSpaces(document.getElementById('mRegPhone').value);
-      const village = titleCaseInput(document.getElementById('mRegVillage').value);
-      if (!fullName) return alert('Name required');
-
-      const submit = document.getElementById('mRegSubmit');
-      submit.disabled = true;
-      submit.textContent = 'Creating…';
-
-      // Close the modal shortly after click (do not wait for success)
-      if (modalCloseTimer) clearTimeout(modalCloseTimer);
-      modalCloseTimer = setTimeout(() => {
-        closeModal();
-      }, 2000);
-
-      onSuccessAsync(res => {
-        // keep local typeahead list up to date + select the new fisherman
-        try {
-          const newF = {
-            personId: (res.personId || '').toString(),
-            fullName: (res.fullName || fullName || '').toString(),
-            phone: (res.phone || phone || '').toString(),
-            village: (res.village || village || '').toString(),
-            registryDate: res.registryDate || ''
-          };
-          if (newF.personId) {
-            const exists = fishermenCache.some(f => (f.personId + '') === (newF.personId + ''));
-            if (!exists) fishermenCache.unshift(newF);
-            fishermenLoaded = true;
-          }
-
-          // select the newly created fisherman
-          selectFisherman(newF);
-          const q = document.getElementById('searchQ');
-          if (q) q.value = newF.fullName || '';
-        } catch (e) { }
-
-        // refresh full list used by typeahead
-        refreshFishermenCacheSilently();
-
-        loadPaymentExplorer();
-      }).registerFisherman({ fullName, phone, village });
-    }
-
-    function loadFishermenCache() {
-      fishermenLoaded = false;
-      onSuccessAsync(list => {
-        if (!Array.isArray(list)) {
-          fishermenCache = [];
-          fishermenLoaded = false;
-          try { console.error('getFishermen unexpected payload:', list); } catch (e) { }
-          return;
-        }
-        fishermenCache = list;
-        fishermenLoaded = true;
-      }).getFishermen();
-    }
-
-    function refreshFishermenCacheSilently() {
-      onSuccessAsync(list => {
-        if (!Array.isArray(list)) return;
-        fishermenCache = list;
-        fishermenLoaded = true;
-      }).getFishermen();
-    }
-
-    function attachTypeaheadHandlers() {
-      const input = document.getElementById('searchQ');
-      if (!input) return;
-      input.addEventListener('input', () => {
-        const q = input.value;
-        const list = filterFishermen(q, 50);
-        renderTypeahead(list, q);
-      });
-      input.addEventListener('focus', () => {
-        const q = input.value;
-        const list = filterFishermen(q, 50);
-        renderTypeahead(list, q);
-      });
-      input.addEventListener('blur', () => {
-        if (typeaheadHideTimer) clearTimeout(typeaheadHideTimer);
-        typeaheadHideTimer = setTimeout(() => hideTypeahead(), 120);
-      });
-    }
-
-    function loadPaymentExplorer() {
-      loadDuePayments();
-      loadPaidPayments();
-    }
-
-    function loadDuePayments() {
-      const info = document.getElementById('dueInfo');
-      const list = document.getElementById('dueList');
-      info.innerText = 'Loading...';
-      list.innerHTML = '';
-
-      onSuccessAsync(rows => {
-        list.innerHTML = '';
-        if (!rows || rows.length === 0) {
-          info.innerText = 'No payments due.';
-          return;
-        }
-        info.innerText = '';
-
-        rows.forEach(p => {
-          const d = document.createElement('div');
-          d.className = 'list-item compact';
-          d.style.cursor = 'default';
-
-          const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
-          const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
-          const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
-          const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
-
-          d.innerHTML =
-            '<div class="flex">' +
-            '<div><b>' + name + '</b><span class="muted">' + phone + '</span></div>' +
-            '<div class="right" style="text-align:right">' +
-            payloadBlock +
-            '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
-            '</div>' +
-            '</div>' +
-            '<div class="small muted">' +
-            (p.fishermanVillage ? ('Village: ' + escapeHtml(p.fishermanVillage) + ' • ') : '') +
-            'Payment: ' + escapeHtml(p.paymentId || '') +
-            '</div>' +
-            '<div class="flex" style="margin-top:6px">' +
-            '<button class="danger" data-confirm-payment="' + escapeHtml(p.paymentId) + '">Confirm payment</button>' +
-            '<div class="right muted small" data-confirm-result></div>' +
-            '</div>';
-
-          const confirmBtn = d.querySelector('button[data-confirm-payment]');
-          const confirmResult = d.querySelector('[data-confirm-result]');
-          confirmBtn.onclick = () => {
-            // Require explicit confirmation in modal (restates key financial details)
-            openPaymentModal(p);
-          };
-
-          list.appendChild(d);
-        });
-      }).getDuePayments();
-    }
-
-    function loadPaidPayments() {
-      const info = document.getElementById('paidInfo');
-      const list = document.getElementById('paidList');
-      info.innerText = 'Loading...';
-      list.innerHTML = '';
-
-      onSuccessAsync(rows => {
-        list.innerHTML = '';
-
-        // Month label + next button state (similar to volunteer panel)
-        try {
-          const d = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth(), 1);
-          document.getElementById('paidMonthLabel').innerText = d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
-        } catch (e) {
-          document.getElementById('paidMonthLabel').innerText = 'Selected month';
-        }
-        try {
-          const cur = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-          const isCurrentMonth = (paidMonthCursor.getFullYear() === cur.getFullYear() && paidMonthCursor.getMonth() === cur.getMonth());
-          document.getElementById('paidNext').disabled = !!isCurrentMonth;
-        } catch (e) { }
-
-        if (!rows || rows.length === 0) {
-          info.innerText = 'No paid payments yet.';
-          return;
-        }
-        info.innerText = '';
-
-        const cursorKey = monthKeyFromDate(paidMonthCursor);
-        const monthRows = rows.filter(p => monthKeyFromDate(parseDMYDateTime(p.date)) === cursorKey);
-        if (monthRows.length === 0) {
-          info.innerText = 'No paid payments for this month.';
-          return;
-        }
-
-        monthRows.forEach(p => {
-          const d = document.createElement('div');
-          d.className = 'list-item';
-          d.style.cursor = 'default';
-
-          const name = p.fishermanName ? escapeHtml(p.fishermanName) : '(Unknown)';
-          const phone = p.fishermanPhone ? (' — ' + escapeHtml(p.fishermanPhone)) : '';
-          const when = p.date ? escapeHtml(formatPaymentExplorerDateTime(p.date)) : '';
-
-          const payloadRmText = (p.payloadRM !== '' && p.payloadRM != null) ? escapeHtml(p.payloadRM) : '';
-          const payloadBlock = payloadRmText ? ('<div><b>' + payloadRmText + ' RM</b></div>') : '<div class="muted small">&nbsp;</div>';
-
-          d.innerHTML =
-            '<div class="flex">' +
-            '<div><b>' + name + '</b><span class="muted">' + phone + '</span></div>' +
-            '<div class="right" style="text-align:right">' +
-            payloadBlock +
-            '<div><b>' + formatKg(p.accumulatedKg || 0) + ' kg</b></div>' +
-            '</div>' +
-            '</div>' +
-            '<div class="small muted">' + (when ? when : '') + '</div>' +
-            '<div class="small muted">Payment: ' + escapeHtml(p.paymentId || '') + ' • Fisherman ID: ' + escapeHtml(p.fishermanId || '') + '</div>' +
-            '<div class="flex" style="margin-top:8px">' +
-            '<button class="disclosure-btn" data-audit-payment="' + escapeHtml(p.paymentId) + '">&gt; View drop-offs</button>' +
-            '<div class="right muted small" data-audit-status></div>' +
-            '</div>' +
-            '<div class="small" data-audit-panel style="margin-top:8px;display:none"></div>';
-
-          const btn = d.querySelector('button[data-audit-payment]');
-          const statusEl = d.querySelector('[data-audit-status]');
-          const panel = d.querySelector('[data-audit-panel]');
-
-          btn.onclick = () => {
-            const isVisible = panel.style.display !== 'none';
-            if (isVisible) {
-              panel.style.display = 'none';
-              btn.textContent = '> View drop-offs';
-              statusEl.innerText = '';
-              return;
-            }
-
-            btn.disabled = true;
-            const prev = btn.textContent;
-            btn.textContent = 'Loading…';
-            statusEl.innerText = '';
-
-            google.script.run
-              .withSuccessHandler(drops => {
-                btn.disabled = false;
-                btn.textContent = 'v Hide drop-offs';
-                panel.style.display = 'block';
-
-                if (!drops || drops.length === 0) {
-                  panel.innerHTML = '<div class="muted">No drop-offs tagged with this payment.</div>';
-                  return;
-                }
-
-                const lines = drops.map(x => {
-                  const date = x.date ? escapeHtml(x.date) : '';
-                  const w = formatKg(x.netWeightKg || 0) + ' kg';
-                  const purity = x.purity ? escapeHtml(x.purity) : '';
-                  const inspector = x.inspector ? escapeHtml(x.inspector) : '';
-                  const notes = x.notes ? escapeHtml(x.notes) : '';
-                  const parts = [];
-                  if (date) parts.push(date);
-                  parts.push(w);
-                  if (purity) parts.push('Purity: ' + purity);
-                  if (inspector) parts.push('Inspector: ' + inspector);
-                  if (notes) parts.push('Notes: ' + notes);
-                  const dropId = x.dropId ? escapeHtml(x.dropId) : '';
-                  return '<div style="padding:8px;border:1px solid #e6e6e6;border-radius:8px;margin-top:6px;background:#fff">' +
-                    '<div><b>' + dropId + '</b></div>' +
-                    '<div class="small">' + parts.join(' • ') + '</div>' +
-                    '</div>';
-                });
-                panel.innerHTML = lines.join('');
-              })
-              .withFailureHandler(err => {
-                btn.disabled = false;
-                btn.textContent = prev;
-                alert('Error: ' + (err.message || err));
-              })
-              .getDropoffsByPaymentId(p.paymentId);
-          };
-
-          list.appendChild(d);
-        });
-      }).getPaidPayments();
-    }
-
-    function paidPrevMonth() {
-      paidMonthCursor = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth() - 1, 1);
-      loadPaidPayments();
-    }
-
-    function paidNextMonth() {
-      paidMonthCursor = new Date(paidMonthCursor.getFullYear(), paidMonthCursor.getMonth() + 1, 1);
-      loadPaidPayments();
-    }
-
-    function getSelectedDropPurity() {
-      const el = document.querySelector('input[name="dropPurity"]:checked');
-      return el ? el.value : 'Clean';
-    }
-
-
-    function logDrop() {
-      const fishermanId = (selectedFishermanId || '').toString().trim();
-      const weightStr = (document.getElementById('dropWeight').value || '').toString().replace(/\D+/g, '');
-      const netWeight = parseInt(weightStr, 10);
-      if (!fishermanId) return alert('Fisherman ID required');
-      if (!netWeight || netWeight <= 0) return alert('Weight must be > 0');
-      const purity = getSelectedDropPurity();
-      const inspector = titleCaseInput((document.getElementById('dropInspector').value || '').toString());
-      if (!inspector) return alert('Inspector is required');
-      const notes = document.getElementById('dropNotes').value;
-
-      const submitBtn = document.getElementById('dropSubmitBtn');
-      const prevText = submitBtn ? submitBtn.textContent : '';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting…';
-      }
-
-      google.script.run
-        .withSuccessHandler(res => {
-          const r = res.allocationResult || res;
-          document.getElementById('dropWeight').value = ''; document.getElementById('dropNotes').value = '';
-          loadPaymentExplorer();
-          loadVolunteerContribution();
-          // refresh accumulating display after allocation
-          try { selectFisherman(lastSelectedFisherman || { personId: fishermanId, fullName: document.getElementById('dropFishermanName') ? document.getElementById('dropFishermanName').innerText : '' }); } catch (e) { }
-
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = prevText || 'Submit';
-          }
-        })
-        .withFailureHandler(err => {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = prevText || 'Submit';
-          }
-          alert('Error: ' + (err.message || err));
-        })
-        .logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes });
-    }
-
-    function clearDropForm() {
-      selectedFishermanId = '';
-      lastSelectedFisherman = null;
-
-      const idText = document.getElementById('dropFishermanIdText');
-      if (idText) idText.innerText = '—';
-      const nameEl = document.getElementById('dropFishermanName');
-      if (nameEl) nameEl.innerText = 'None selected';
-      const accumulatingEl = document.getElementById('dropAccumulatingWeight');
-      if (accumulatingEl) accumulatingEl.innerText = '—';
-
-      document.getElementById('dropWeight').value = '';
-      document.getElementById('dropInspector').value = '';
-      document.getElementById('dropNotes').value = '';
-
-      const clean = document.querySelector('input[name="dropPurity"][value="Clean"]');
-      if (clean) clean.checked = true;
       setAdmitVisible(false);
+      setAdmitTab('admit');
+    </script>
 
-      try {
-        document.getElementById('manageDropsInfo').innerText = '';
-        document.getElementById('manageDropsList').innerHTML = '';
-      } catch (e) { }
-    }
+    <div class="footer-divider"></div>
 
-    function loadVolunteerContribution() {
-      const y = volMonthCursor.getFullYear();
-      const m = volMonthCursor.getMonth() + 1;
-      document.getElementById('volMonthLabel').innerText = 'Loading...';
-      document.getElementById('volSummary').innerText = '';
-      document.getElementById('volList').innerHTML = '';
-
-      onSuccessAsync(res => {
-        document.getElementById('volMonthLabel').innerText = res.monthLabel;
-        document.getElementById('volSummary').innerText =
-          'Total: ' + (res.totalKg || 0) + ' kg' +
-          ' (Clean ' + (res.totalCleanKg || 0) + ', Partial ' + (res.totalPartialKg || 0) + ', Unclean ' + (res.totalUncleanKg || 0) + ')';
-
-        const nextBtn = document.getElementById('volNext');
-        nextBtn.disabled = !!res.isCurrentMonth;
-
-        const list = document.getElementById('volList');
-        if (!res.items || res.items.length === 0) {
-          const empty = document.createElement('div');
-          empty.className = 'muted small';
-          empty.innerText = 'No drop-offs logged for this month.';
-          list.appendChild(empty);
-          return;
-        }
-
-        res.items.forEach(it => {
-          const row = document.createElement('div');
-          row.className = 'list-item';
-          row.style.cursor = 'default';
-          row.innerHTML =
-            '<div class="flex">' +
-            '<div><b>' + escapeHtml(it.inspector) + '</b></div>' +
-            '<div class="right"><b>' + (it.totalKg || 0) + ' kg</b></div>' +
-            '</div>' +
-            '<div class="small muted">Clean ' + (it.cleanKg || 0) + ' • Partial ' + (it.partialKg || 0) + ' • Unclean ' + (it.uncleanKg || 0) + '</div>';
-          list.appendChild(row);
-        });
-      }).getVolunteerContributionMonth({ year: y, month: m });
-    }
-
-    function volPrevMonth() {
-      volMonthCursor = new Date(volMonthCursor.getFullYear(), volMonthCursor.getMonth() - 1, 1);
-      loadVolunteerContribution();
-    }
-
-    function volNextMonth() {
-      volMonthCursor = new Date(volMonthCursor.getFullYear(), volMonthCursor.getMonth() + 1, 1);
-      loadVolunteerContribution();
-    }
-
-    // init
-    loadActiveDeal();
-    loadFishermenCache();
-    attachTypeaheadHandlers();
-    attachDropWeightDigitsOnly();
-    loadVolunteerContribution();
-    loadPaymentExplorer();
-    setAdmitVisible(false);
-    setAdmitTab('admit');
-  </script>
-
-  <div class="footer-divider"></div>
-
-  <footer class="footer muted small">
-    <div class="footer-inner">
-      <span>
-        Need guidance?
-        <a href="https://docs.google.com/document/d/1TxlBE1vI4WK_BTvwI6KKxWuMgfX6MAjSxJkEstTmNIs/edit" target="_blank" rel="noopener noreferrer">Read the docs</a>.
-      </span>
-      <span class="footer-actions">
-        <span class="footer-sep" aria-hidden="true">|</span>
-        <a class="github-link" href="https://github.com/mingaworks/fishnet-recycle-system" target="_blank" rel="noopener noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
-          <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path>
-          </svg>
-        </a>
-      </span>
-    </div>
-  </footer>
+    <footer class="footer muted small">
+      <div class="footer-inner">
+        <span>
+          Need guidance?
+          <a href="https://docs.google.com/document/d/1TxlBE1vI4WK_BTvwI6KKxWuMgfX6MAjSxJkEstTmNIs/edit" target="_blank"
+            rel="noopener noreferrer">Read the docs</a>.
+        </span>
+        <span class="footer-actions">
+          <span class="footer-sep" aria-hidden="true">|</span>
+          <a class="github-link" href="https://github.com/mingaworks/fishnet-recycle-system" target="_blank"
+            rel="noopener noreferrer" aria-label="Source code on GitHub" title="Source code on GitHub">
+            <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z">
+              </path>
+            </svg>
+          </a>
+        </span>
+      </div>
+    </footer>
+  </div>
 </body>
 
 </html>
