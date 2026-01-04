@@ -10,8 +10,9 @@ Administrative Web Application for:
 - Viewing monthly volunteer (inspector) contributions
 
 In-app links:
-- SOP docs: https://docs.google.com/document/d/1TxlBE1vI4WK_BTvwI6KKxWuMgfX6MAjSxJkEstTmNIs/edit
+- In-app docs link is configured via the Script Property `GOOGLE_DOCS_ID` (Google Doc ID only).
 - Source repo: https://github.com/mingaworks/fishnet-recycle-system
+
 ## What’s in this repo
 - `Index.html`: Admin UI (search/typeahead, register modal, admit fishnet, payments, volunteer contribution)
 - `Code.gs`: Backend (Sheets I/O, allocation logic, payment querying/confirmation, volunteer contribution summary)
@@ -48,6 +49,17 @@ Notes:
 - The script ensures the `Payment ID` column exists in Drop-off Log (it adds it if missing).
 - For auditability, drop-off rows that “count toward” a payment are tagged with that payment’s `Payment ID`.
 
+## Apps Script setup (first time)
+1. Create (or open) the operational Google Spreadsheet.
+2. Create the required sheet tabs and headers exactly as described above.
+3. Go to Extensions → Apps Script.
+4. In the Apps Script editor:
+   - Replace the default `Code.gs` contents with this repo’s `Code.gs`.
+   - Add a new HTML file named `Index` and paste in this repo’s `Index.html` contents.
+5. Configure Script Properties (Project Settings → Script Properties):
+  - `GOOGLE_DOCS_ID`: the Google Doc ID (the part after `/d/`) for the in-app “Read the docs” link.
+5. Save.
+
 ## Deploy (publish as a Web App)
 1. Open the Google Spreadsheet.
 2. Go to Extensions → Apps Script.
@@ -57,61 +69,11 @@ Notes:
    - Who has access: choose based on your org’s needs
 5. Deploy and open the Web App URL.
 
-## How the app works (staff SOP)
+Notes:
+- If you update `Code.gs` / `Index.html`, you need to create a new deployment version (or update the existing deployment) for changes to appear to users.
 
-### 1) Find / Register fisherman
-- Use the Find Fisherman box (typeahead search by name or Person ID).
-- If no match, click **Register Fisherman** to open a modal and create a new fisherman.
-- After registering, the UI selects the new fisherman and refreshes the typeahead cache.
-
-### 2) Admit fishnet (log a drop-off)
-- Select a fisherman first.
-- The Admit Fishnet panel shows:
-  - Fisherman summary (name/phone + ID/village)
-  - Fisherman ID (read-only)
-- Enter:
-  - Weight (kg)
-  - Purity (radio buttons: Clean / Partial / Unclean)
-- Inspector name (**required**)
-  - Notes (optional)
-- Click Submit to create a Drop-off Log row and trigger allocation.
-
-Manage existing (unpaid) drop-offs:
-- Use **Manage Drop-offs** tab to edit or delete drop-offs that are not part of **Paid** payments.
-- Editing/deleting triggers server-side reallocation and refreshes due/paid/payment summaries.
-
-### 3) Automatic allocation & payment lifecycle
-When a drop-off is logged:
-- The script allocates untagged drop-offs into the current Accumulating payment until the deal threshold is met.
-- If the threshold is met/exceeded:
-  - the payment is finalized as `Payment Due`
-  - contributing drop-offs are tagged in Drop-off Log with the payment’s `Payment ID`
-  - any leftover (excess) weight is split into a new untagged drop row and a new Accumulating payment is created
-
-Payload:
-- The `Payload (RM)` is computed from tagged drop-offs using the active deal’s rates and rounded to 2 decimals.
-
-### 4) Due payments → confirm payout
-- The UI lists all `Payment Due` items with fisherman name/phone.
-- Clicking **Confirm payment** opens a confirmation modal that restates:
-  - Fisherman name
-  - Total weight
-  - Payment amount
-  - Payment ID
-- Confirming marks the payment as `Paid` (irreversible) and the backend stamps the payment date/time.
-
-### 5) Payment explorer (paid payments + audit)
-- Shows `Paid` payments.
-- Month navigation (Prev/Next) filters the list to one month at a time.
-- Each paid payment has an orange disclosure control (e.g. `> View drop-offs`) to show the exact tagged drop-offs.
-
-Date display:
-- Backend stores Dates as real sheet date values.
-- UI shows payment timestamps as `17 Nov 2025 17:35`.
-
-### 6) Volunteer contribution (monthly)
-- Month navigation (Prev/Next) with a month label.
-- Totals net weight by inspector for the selected month, including a breakdown by purity.
+## Staff SOP
+Day-to-day usage instructions are in [docs/SOP.md](docs/SOP.md)
 
 ## Implementation notes
 - Sheet headers are used by name; changing header text requires code updates.
@@ -125,7 +87,7 @@ Date display:
 - Fishermen: `getFishermen()`, `findFishermen(query)`, `registerFisherman({ fullName, phone, village })`
 - Deals: `getActiveDeal()`
 - Drop-offs: `logDropAndProcess({ fishermanId, netWeight, purity, inspector, notes })`
-- Payments: `getDuePayments()` (also `getOpenPayments()` alias), `confirmPayment(paymentId)`, `getPaidPayments()`, `getDropoffsByPaymentId(paymentId)`
+- Payments: `getDuePayments()` (also `getOpenPayments()` alias), `confirmPayment(paymentId)`, `getPaidPayments()`, `getDropoffsByPaymentId(paymentId)`, `markPaymentUnpaid(paymentId)`
 - Volunteer contribution: `getVolunteerContributionMonth({ year, month })`
 
 ## Quick troubleshooting
@@ -135,7 +97,6 @@ Date display:
   - confirm Payment History headers match exactly
   - ensure rows have a non-empty Payment ID
   - ensure Status is `Payment Due` or `Paid` (case/spacing variants are usually handled)
-
 ## UI notes
 - The footer includes a link to the SOP docs and a GitHub icon linking to the source repo.
-- Confirming a payment is intentionally gated behind a modal (financially sensitive and irreversible).
+- Confirming a payment is intentionally gated behind a modal (financially sensitive).

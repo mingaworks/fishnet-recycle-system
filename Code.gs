@@ -28,7 +28,19 @@ function headerMap(sheet) {
 }
 
 function doGet() {
-    return HtmlService.createHtmlOutputFromFile('Index').setTitle('Fishnet Recycling Admin');
+    const template = HtmlService.createTemplateFromFile('Index');
+    template.adiDocUrl = _getAdiDocUrl();
+    return template.evaluate().setTitle('Fishnet Recycling Admin');
+}
+
+function _getAdiDocUrl() {
+    const props = PropertiesService.getScriptProperties();
+    const id = (props.getProperty('GOOGLE_DOCS_ID') || '').toString().trim();
+
+    // Allow either a full URL or just the document id (recommended).
+    if (id && /^https?:\/\//i.test(id)) return id;
+
+    return 'https://docs.google.com/document/d/' + encodeURIComponent(id) + '/edit';
 }
 
 function _ensureHeaderExists(sheetName, headerName) {
