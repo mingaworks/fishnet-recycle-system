@@ -799,6 +799,12 @@ function getVolunteerContributionMonth({ year, month } = {}) {
     let totalPartialKg = 0;
     let totalUncleanKg = 0;
 
+    const deal = getActiveDeal();
+    const rateClean = deal && deal.data ? (parseFloat(deal.data.rateClean) || 0) : 0;
+    const ratePartial = deal && deal.data ? (parseFloat(deal.data.ratePartial) || 0) : 0;
+    const rateUnclean = deal && deal.data ? (parseFloat(deal.data.rateUnclean) || 0) : 0;
+    const volunteerShareFactor = 1 / 3;
+
     rows.forEach(r => {
         const d = _coerceToDate(r[dateIdx]);
         if (!d) return;
@@ -832,19 +838,26 @@ function getVolunteerContributionMonth({ year, month } = {}) {
     });
 
     const items = Object.keys(totalsByKey)
-        .map(k => ({
-            inspector: displayNameByKey[k],
-            totalKg: Math.round(totalsByKey[k].totalKg * 100) / 100,
-            cleanKg: Math.round(totalsByKey[k].cleanKg * 100) / 100,
-            partialKg: Math.round(totalsByKey[k].partialKg * 100) / 100,
-            uncleanKg: Math.round(totalsByKey[k].uncleanKg * 100) / 100
-        }))
+        .map(k => {
+            const raw = totalsByKey[k];
+            const payout = (raw.cleanKg * rateClean + raw.partialKg * ratePartial + raw.uncleanKg * rateUnclean) * volunteerShareFactor;
+            return {
+                inspector: displayNameByKey[k],
+                totalKg: Math.round(raw.totalKg * 100) / 100,
+                cleanKg: Math.round(raw.cleanKg * 100) / 100,
+                partialKg: Math.round(raw.partialKg * 100) / 100,
+                uncleanKg: Math.round(raw.uncleanKg * 100) / 100,
+                payoutRM: Math.round(payout * 100) / 100
+            };
+        })
         .sort((a, b) => b.totalKg - a.totalKg || a.inspector.localeCompare(b.inspector));
 
     const curY = defaultYear;
     const curM = defaultMonth;
     const isCurrentMonth = (y === curY && m === curM);
     const monthLabel = _monthLabel(y, m);
+
+    const totalPayout = (totalCleanKg * rateClean + totalPartialKg * ratePartial + totalUncleanKg * rateUnclean) * volunteerShareFactor;
 
     return {
         year: y,
@@ -854,6 +867,9 @@ function getVolunteerContributionMonth({ year, month } = {}) {
         totalCleanKg: Math.round(totalCleanKg * 100) / 100,
         totalPartialKg: Math.round(totalPartialKg * 100) / 100,
         totalUncleanKg: Math.round(totalUncleanKg * 100) / 100,
+        totalPayoutRM: Math.round(totalPayout * 100) / 100,
+        hasActiveDeal: !!deal,
+        volunteerShareFactor,
         isCurrentMonth,
         items
     };

@@ -801,7 +801,7 @@
             <input id="mRegName" />
 
             <div class="field-name">Phone</div>
-            <input id="mRegPhone" />
+            <input id="mRegPhone" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" />
 
             <div class="field-name">Village</div>
             <input id="mRegVillage" />
@@ -1217,6 +1217,23 @@
         if (!isFinite(n)) return '0';
         const rounded = Math.round(n * 100) / 100;
         return (rounded % 1 === 0) ? ('' + rounded.toFixed(0)) : ('' + rounded.toFixed(2));
+      }
+
+      function formatRM(v) {
+        const n = parseFloat(v);
+        if (!isFinite(n)) return '0.00';
+        const rounded = Math.round(n * 100) / 100;
+        return rounded.toFixed(2);
+      }
+
+      function attachRegisterPhoneDigitsOnly() {
+        const el = document.getElementById('mRegPhone');
+        if (!el) return;
+        el.addEventListener('input', () => {
+          const v = (el.value || '').toString();
+          const digits = v.replace(/\D+/g, '');
+          if (digits !== v) el.value = digits;
+        });
       }
 
       function selectFisherman(f) {
@@ -1986,8 +2003,9 @@
         onSuccessAsync(res => {
           document.getElementById('volMonthLabel').innerText = res.monthLabel;
           document.getElementById('volSummary').innerText =
-            'Total: ' + (res.totalKg || 0) + ' kg' +
-            ' (Clean ' + (res.totalCleanKg || 0) + ', Partial ' + (res.totalPartialKg || 0) + ', Unclean ' + (res.totalUncleanKg || 0) + ')';
+            'Total: ' + formatKg(res.totalKg || 0) + ' kg' +
+            ' • RM ' + formatRM(res.totalPayoutRM || 0) +
+            ' (Clean ' + formatKg(res.totalCleanKg || 0) + ', Partial ' + formatKg(res.totalPartialKg || 0) + ', Unclean ' + formatKg(res.totalUncleanKg || 0) + ')';
 
           const nextBtn = document.getElementById('volNext');
           nextBtn.disabled = !!res.isCurrentMonth;
@@ -2007,10 +2025,10 @@
             row.style.cursor = 'default';
             row.innerHTML =
               '<div class="flex">' +
-              '<div><b>' + escapeHtml(it.inspector) + '</b></div>' +
-              '<div class="right"><b>' + (it.totalKg || 0) + ' kg</b></div>' +
+              '<div><b>' + escapeHtml(it.inspector) + '</b> <span class="muted">•</span> <span class="small">' + formatKg(it.totalKg || 0) + ' kg</span></div>' +
+              '<div class="right"><b>RM ' + formatRM(it.payoutRM || 0) + '</b></div>' +
               '</div>' +
-              '<div class="small muted">Clean ' + (it.cleanKg || 0) + ' • Partial ' + (it.partialKg || 0) + ' • Unclean ' + (it.uncleanKg || 0) + '</div>';
+              '<div class="small muted">Clean ' + formatKg(it.cleanKg || 0) + ' • Partial ' + formatKg(it.partialKg || 0) + ' • Unclean ' + formatKg(it.uncleanKg || 0) + '</div>';
             list.appendChild(row);
           });
         }).getVolunteerContributionMonth({ year: y, month: m });
@@ -2031,6 +2049,7 @@
       loadFishermenCache();
       attachTypeaheadHandlers();
       attachDropWeightDigitsOnly();
+      attachRegisterPhoneDigitsOnly();
       loadVolunteerContribution();
       loadPaymentExplorer();
       setAdmitVisible(false);
@@ -2048,8 +2067,7 @@
       <div class="footer-inner">
         <span>
           Need guidance?
-          <a href="<?= adiDocUrl ?>" target="_blank"
-            rel="noopener noreferrer">Read the docs</a>.
+          <a href="<?= adiDocUrl ?>" target="_blank" rel="noopener noreferrer">Read the docs</a>.
         </span>
         <span class="footer-actions">
           <span class="footer-sep" aria-hidden="true">|</span>
