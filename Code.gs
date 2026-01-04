@@ -164,6 +164,114 @@ function findFishermen(query) {
     return results;
 }
 
+function _findFishermanRowById(personId) {
+    if (!personId) return null;
+    const sheet = getSheet(SHEET_NAMES.FISHERMEN);
+    const headers = headerMap(sheet);
+    const rows = getDataRows(sheet);
+    const idCol = headers['Person ID'];
+    if (!idCol) throw new Error('Fishermen Registry headers missing Person ID');
+    for (let i = 0; i < rows.length; i++) {
+        const rowId = (rows[i][idCol - 1] || '').toString();
+        if (rowId && rowId === (personId + '')) {
+            return {
+                rowIndex: 2 + i,
+                values: rows[i],
+                headers
+            };
+        }
+    }
+    return null;
+}
+
+function updateFisherman({ personId, fullName, phone, village } = {}) {
+    if (!personId) throw new Error('personId required');
+    const found = _findFishermanRowById(personId);
+    if (!found) throw new Error('Fisherman not found: ' + personId);
+
+    const sheet = getSheet(SHEET_NAMES.FISHERMEN);
+    const headers = found.headers;
+    const rowIndex = found.rowIndex;
+    const rowVals = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    const name = _titleCase(fullName);
+    if (!name) throw new Error('Full name is required');
+
+    const normalizedPhone = (phone == null) ? '' : (phone + '').toString().replace(/\D+/g, '');
+    const normalizedVillage = _titleCase(village);
+
+    if (!headers['Full Name']) throw new Error('Fishermen Registry headers missing Full Name');
+    rowVals[headers['Full Name'] - 1] = name;
+    if (headers['Phone']) rowVals[headers['Phone'] - 1] = normalizedPhone;
+    if (headers['Village']) rowVals[headers['Village'] - 1] = normalizedVillage;
+
+    sheet.getRange(rowIndex, 1, 1, rowVals.length).setValues([rowVals]);
+
+    return {
+        ok: true,
+        fisherman: {
+            personId: (personId + ''),
+            fullName: name,
+            phone: normalizedPhone,
+            village: normalizedVillage
+        }
+    };
+}
+
+function deleteFisherman({ personId, deepClean } = {}) {
+    if (!personId) throw new Error('personId required');
+
+    const deep = deepClean !== false; // default true
+
+    const fishermenSheet = getSheet(SHEET_NAMES.FISHERMEN);
+    const fFound = _findFishermanRowById(personId);
+    if (!fFound) throw new Error('Fisherman not found: ' + personId);
+
+    let deletedDrops = 0;
+    let deletedPayments = 0;
+
+    if (deep) {
+        // Delete drop-offs for this fisherman (bottom-up)
+        _ensureHeaderExists(SHEET_NAMES.DROPS, 'Payment ID');
+        const dropsSheet = getSheet(SHEET_NAMES.DROPS);
+        const dHeaders = headerMap(dropsSheet);
+        const dRows = getDataRows(dropsSheet);
+        const fidCol = dHeaders['Fisherman ID'];
+        if (fidCol) {
+            for (let i = dRows.length - 1; i >= 0; i--) {
+                const fid = (dRows[i][fidCol - 1] || '').toString();
+                if (fid !== (personId + '')) continue;
+                dropsSheet.deleteRow(2 + i);
+                deletedDrops++;
+            }
+        }
+
+        // Delete payments for this fisherman (bottom-up)
+        const paymentsSheet = getSheet(SHEET_NAMES.PAYMENTS);
+        const pHeaders = headerMap(paymentsSheet);
+        const pRows = getDataRows(paymentsSheet);
+        const pfidCol = pHeaders['Fisherman ID'];
+        if (pfidCol) {
+            for (let i = pRows.length - 1; i >= 0; i--) {
+                const fid = (pRows[i][pfidCol - 1] || '').toString();
+                if (fid !== (personId + '')) continue;
+                paymentsSheet.deleteRow(2 + i);
+                deletedPayments++;
+            }
+        }
+    }
+
+    fishermenSheet.deleteRow(fFound.rowIndex);
+
+    return {
+        ok: true,
+        personId: (personId + ''),
+        deepClean: deep,
+        deletedDrops,
+        deletedPayments
+    };
+}
+
 function getOpenPayments() {
     // Backwards compatible alias.
     return getDuePayments();

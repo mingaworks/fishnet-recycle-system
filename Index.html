@@ -689,6 +689,7 @@
             <button id="tabAdmit" class="tab-btn active" onclick="setAdmitTab('admit')">Admit Fishnet</button>
             <button id="tabManage" class="tab-btn" onclick="setAdmitTab('manage')">Manage Drop-offs</button>
             <button id="tabHistory" class="tab-btn" onclick="setAdmitTab('history')">Payment History</button>
+            <button id="tabEdit" class="tab-btn" onclick="setAdmitTab('edit')">Settings</button>
           </div>
           <span class="tabs-spacer" aria-hidden="true"></span>
         </div>
@@ -737,6 +738,29 @@
         <div id="admitTabHistory" class="hidden">
           <div id="payHistInfo" class="muted small" style="margin-top:10px"></div>
           <div id="payHistTable" style="margin-top:10px"></div>
+        </div>
+
+        <div id="admitTabEdit" class="hidden">
+          <div class="form" style="margin-top:10px">
+            <div class="form-grid">
+              <div class="field-name"><b>Fisherman ID</b></div>
+              <div class="field-value"><span id="editFishermanId" class="muted">—</span></div>
+
+              <div class="field-name">Full name</div>
+              <input id="editName" />
+
+              <div class="field-name">Phone</div>
+              <input id="editPhone" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="tel" />
+
+              <div class="field-name">Village</div>
+              <input id="editVillage" />
+            </div>
+          </div>
+          <div class="flex" style="margin-top:10px">
+            <button id="editSaveBtn" onclick="saveFishermanEdits()">Save changes</button>
+            <button id="editDeleteBtn" class="danger" onclick="openDeleteFishermanModal()">Delete fisherman</button>
+            <div id="editResult" class="muted small right"></div>
+          </div>
         </div>
       </div>
 
@@ -843,6 +867,29 @@
       </div>
     </div>
 
+    <!-- delete fisherman modal -->
+    <div id="deleteFishermanBackdrop" class="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h4>Delete Fisherman</h4>
+        <div class="notice" style="margin-top:10px">
+          This will delete <b id="mDelFishermanName">—</b> (<span id="mDelFishermanId" class="muted">—</span>).
+        </div>
+
+        <div class="form">
+          <label style="margin-top:10px">
+            <input id="mDelDeepClean" type="checkbox" checked style="width:auto;margin-right:6px" />
+            Also delete this fisherman’s drop-offs and payments
+          </label>
+        </div>
+
+        <div style="margin-top:10px" class="flex">
+          <button id="mDelConfirm" class="danger" onclick="confirmDeleteFishermanFromModal()">Delete</button>
+          <button class="secondary" onclick="closeDeleteFishermanModal()">Cancel</button>
+          <div id="mDelResult" class="muted small right"></div>
+        </div>
+      </div>
+    </div>
+
     <script>
       let lastSelectedFisherman = null;
       let modalCloseTimer = null;
@@ -869,20 +916,24 @@
       }
 
       function setAdmitTab(tab) {
-        admitActiveTab = (tab === 'manage') ? 'manage' : (tab === 'history' ? 'history' : 'admit');
+        admitActiveTab = (tab === 'manage') ? 'manage' : (tab === 'history' ? 'history' : (tab === 'edit' ? 'edit' : 'admit'));
         const tabAdmit = document.getElementById('tabAdmit');
         const tabManage = document.getElementById('tabManage');
         const tabHistory = document.getElementById('tabHistory');
+        const tabEdit = document.getElementById('tabEdit');
         const panelAdmit = document.getElementById('admitTabAdmit');
         const panelManage = document.getElementById('admitTabManage');
         const panelHistory = document.getElementById('admitTabHistory');
+        const panelEdit = document.getElementById('admitTabEdit');
 
         if (tabAdmit) tabAdmit.classList.toggle('active', admitActiveTab === 'admit');
         if (tabManage) tabManage.classList.toggle('active', admitActiveTab === 'manage');
         if (tabHistory) tabHistory.classList.toggle('active', admitActiveTab === 'history');
+        if (tabEdit) tabEdit.classList.toggle('active', admitActiveTab === 'edit');
         if (panelAdmit) panelAdmit.classList.toggle('hidden', admitActiveTab !== 'admit');
         if (panelManage) panelManage.classList.toggle('hidden', admitActiveTab !== 'manage');
         if (panelHistory) panelHistory.classList.toggle('hidden', admitActiveTab !== 'history');
+        if (panelEdit) panelEdit.classList.toggle('hidden', admitActiveTab !== 'edit');
 
         if (admitActiveTab === 'manage') {
           loadManageDropoffs();
@@ -891,6 +942,117 @@
         if (admitActiveTab === 'history') {
           loadPaymentHistory();
         }
+      }
+
+      function openDeleteFishermanModal() {
+        if (!selectedFishermanId) return alert('Select a fisherman first.');
+        const backdrop = document.getElementById('deleteFishermanBackdrop');
+        if (!backdrop) return;
+
+        const name = (lastSelectedFisherman && lastSelectedFisherman.fullName) ? (lastSelectedFisherman.fullName + '') : '';
+        const id = (selectedFishermanId + '').toString();
+
+        const nEl = document.getElementById('mDelFishermanName');
+        const idEl = document.getElementById('mDelFishermanId');
+        if (nEl) nEl.textContent = name || '—';
+        if (idEl) idEl.textContent = id || '—';
+
+        const chk = document.getElementById('mDelDeepClean');
+        if (chk) chk.checked = true;
+
+        const res = document.getElementById('mDelResult');
+        if (res) res.textContent = '';
+        const btn = document.getElementById('mDelConfirm');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Delete';
+        }
+
+        backdrop.style.display = 'flex';
+      }
+
+      function closeDeleteFishermanModal() {
+        const backdrop = document.getElementById('deleteFishermanBackdrop');
+        if (backdrop) backdrop.style.display = 'none';
+      }
+
+      function confirmDeleteFishermanFromModal() {
+        if (!selectedFishermanId) return alert('Select a fisherman first.');
+        const deepCleanEl = document.getElementById('mDelDeepClean');
+        const deepClean = deepCleanEl ? !!deepCleanEl.checked : true;
+
+        const btn = document.getElementById('mDelConfirm');
+        const res = document.getElementById('mDelResult');
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Deleting…';
+        }
+        if (res) res.textContent = '';
+
+        google.script.run
+          .withSuccessHandler(r => {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Delete';
+            }
+            closeDeleteFishermanModal();
+            resetSearchFlow();
+            refreshFishermenCacheSilently();
+            loadPaymentExplorer();
+            loadVolunteerContribution();
+          })
+          .withFailureHandler(err => {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Delete';
+            }
+            if (res) res.textContent = 'Error: ' + (err && err.message ? err.message : err);
+          })
+          .deleteFisherman({ personId: selectedFishermanId, deepClean });
+      }
+
+      function saveFishermanEdits() {
+        if (!selectedFishermanId) return alert('Select a fisherman first.');
+
+        const fullName = normalizeSpaces((document.getElementById('editName') && document.getElementById('editName').value) || '');
+        const phone = ((document.getElementById('editPhone') && document.getElementById('editPhone').value) || '').toString();
+        const village = normalizeSpaces((document.getElementById('editVillage') && document.getElementById('editVillage').value) || '');
+
+        if (!fullName) return alert('Full name is required');
+
+        const btn = document.getElementById('editSaveBtn');
+        const res = document.getElementById('editResult');
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Saving…';
+        }
+        if (res) res.textContent = '';
+
+        google.script.run
+          .withSuccessHandler(r => {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Save changes';
+            }
+            if (r && r.ok && r.fisherman) {
+              if (res) res.textContent = 'Saved.';
+              refreshFishermenCacheSilently();
+              try { selectFisherman(r.fisherman); } catch (e) { }
+            } else {
+              if (res) res.textContent = 'Saved.';
+              refreshFishermenCacheSilently();
+            }
+          })
+          .withFailureHandler(err => {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Save changes';
+            }
+            if (res) res.textContent = 'Error: ' + (err && err.message ? err.message : err);
+          })
+          .updateFisherman({ personId: selectedFishermanId, fullName, phone, village });
       }
 
       function loadPaymentHistory() {
@@ -1236,9 +1398,32 @@
         });
       }
 
+      function attachEditPhoneDigitsOnly() {
+        const el = document.getElementById('editPhone');
+        if (!el) return;
+        el.addEventListener('input', () => {
+          const v = (el.value || '').toString();
+          const digits = v.replace(/\D+/g, '');
+          if (digits !== v) el.value = digits;
+        });
+      }
+
       function selectFisherman(f) {
         lastSelectedFisherman = f;
         selectedFishermanId = (f.personId || '').toString();
+
+        try {
+          const editId = document.getElementById('editFishermanId');
+          if (editId) editId.innerText = selectedFishermanId || '—';
+          const editName = document.getElementById('editName');
+          if (editName) editName.value = (f && f.fullName ? (f.fullName + '') : '');
+          const editPhone = document.getElementById('editPhone');
+          if (editPhone) editPhone.value = (f && f.phone ? (f.phone + '') : '');
+          const editVillage = document.getElementById('editVillage');
+          if (editVillage) editVillage.value = (f && f.village ? (f.village + '') : '');
+          const editRes = document.getElementById('editResult');
+          if (editRes) editRes.textContent = '';
+        } catch (e) { }
 
         const idText = document.getElementById('dropFishermanIdText');
         if (idText) idText.innerText = selectedFishermanId || '—';
@@ -1979,6 +2164,19 @@
         const accumulatingEl = document.getElementById('dropAccumulatingWeight');
         if (accumulatingEl) accumulatingEl.innerText = '—';
 
+        try {
+          const editId = document.getElementById('editFishermanId');
+          if (editId) editId.innerText = '—';
+          const editName = document.getElementById('editName');
+          if (editName) editName.value = '';
+          const editPhone = document.getElementById('editPhone');
+          if (editPhone) editPhone.value = '';
+          const editVillage = document.getElementById('editVillage');
+          if (editVillage) editVillage.value = '';
+          const editRes = document.getElementById('editResult');
+          if (editRes) editRes.textContent = '';
+        } catch (e) { }
+
         document.getElementById('dropWeight').value = '';
         document.getElementById('dropInspector').value = '';
         document.getElementById('dropNotes').value = '';
@@ -2050,6 +2248,7 @@
       attachTypeaheadHandlers();
       attachDropWeightDigitsOnly();
       attachRegisterPhoneDigitsOnly();
+      attachEditPhoneDigitsOnly();
       loadVolunteerContribution();
       loadPaymentExplorer();
       setAdmitVisible(false);
