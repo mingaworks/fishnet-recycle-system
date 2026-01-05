@@ -281,7 +281,9 @@
       font-weight: 800;
       color: var(--accent);
       text-decoration: none;
-      padding: 2px 0
+      padding: 6px 0 2px 0;
+      justify-self: end;
+      text-align: right
     }
 
     .register-link:hover {
@@ -312,6 +314,10 @@
       border-bottom: 1px solid #eee
     }
 
+    details.collapsible[open]>summary {
+      background: #e9ecef
+    }
+
     details.collapsible:not([open])>summary {
       border-bottom: none
     }
@@ -323,7 +329,9 @@
     details.collapsible>summary::before {
       content: '▸';
       color: var(--muted);
-      font-weight: 800
+      font-weight: 900;
+      font-size: 20px;
+      line-height: 1
     }
 
     details.collapsible[open]>summary::before {
@@ -357,6 +365,18 @@
 
     .summary-actions button {
       margin-top: 0
+    }
+
+    /* make month navigation buttons easier to spot */
+    .summary-actions button.secondary {
+      border-width: 2px;
+      font-size: 18px;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center
     }
 
     .collapsible-body {
